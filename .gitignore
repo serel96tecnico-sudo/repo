@@ -1,0 +1,40 @@
+# Secrets
+.env
+.env.*
+
+# Context files con datos vivos/sensibles
+contex/portfolio.json
+contex/daily_state_*.json
+contex/ticker_universe_*.json
+
+# Output (reportes y logs)
+output/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Entornos virtuales
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporales
+*.tmp

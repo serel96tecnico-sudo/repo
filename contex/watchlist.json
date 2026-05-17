@@ -1,0 +1,17 @@
+{
+  "updated": "2026-05-14",
+  "description": "DeGiro favourites list",
+  "tickers": [
+    "NVO", "PDD", "AMD", "GOOGL", "AAPL", "APLD", "APP", "ASTS", "AXON",
+    "BMNR", "CCJ", "CVX", "CRCL", "CRWD", "QBTS", "DFDV", "DLO", "HIMS",
+    "INTC", "IONQ", "IREN", "FROG", "LIF", "LULU", "MARA", "MELI", "NBIS",
+    "NU", "SMR", "NVDA", "OKLO", "OPEN", "OSCR", "PAGS", "PEP", "PSX",
+    "RZLV", "RGTI", "RKLB", "SES", "SBET", "SIRI", "TEM", "TSLA", "TMDX",
+    "TSSI", "UBER", "UNH", "UPST", "VKTX",
+    "CLSK", "JD", "MRVL", "ADBE", "HCTI", "NKE", "PANW",
+    "LMT", "CRML", "MVIS", "GRAB", "XPEV", "TMQ", "SLNH",
+    "LOCL", "MXL", "ORKA", "MRAM", "DGXX", "RXT", "ASML",
+    "CIFR", "OPTT", "CMCSA", "META", "ILF",
+    "STNE", "DXCM", "PZZA", "FIG", "AMAT", "LMND"
+  ]
+}
