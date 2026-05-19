@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -106,6 +107,33 @@ class ContextManager:
                 except (ValueError, OSError):
                     continue
         return deleted
+
+    def load_broker3_state(self) -> dict:
+        """Read broker3_positions.json written by the MT4 EA every 5 seconds."""
+        mt4_dir = os.getenv("BROKER3_MT4_FILES", "")
+        candidates = [
+            Path(mt4_dir) / "broker3_positions.json" if mt4_dir else None,
+            self.context_dir / "broker3_positions.json",
+        ]
+        for path in candidates:
+            if path and path.exists() and path.stat().st_size > 0:
+                try:
+                    return json.loads(path.read_text(encoding="utf-8"))
+                except (json.JSONDecodeError, OSError):
+                    continue
+        return {}
+
+    def sync_broker3(self) -> bool:
+        """Copy broker3_positions.json from MT4 Files folder into contex/."""
+        mt4_dir = os.getenv("BROKER3_MT4_FILES", "")
+        if not mt4_dir:
+            return False
+        src = Path(mt4_dir) / "broker3_positions.json"
+        dst = self.context_dir / "broker3_positions.json"
+        if src.exists() and src.stat().st_size > 0:
+            shutil.copy2(src, dst)
+            return True
+        return False
 
     def _atomic_write_json(self, path: Path, data) -> None:
         tmp_path = path.with_suffix(".tmp")

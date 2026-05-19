@@ -22,15 +22,15 @@ LONG_SCREENER_FILTERS = {
     "Average Volume": "Over 500K",
     "Country": "USA",
     "Analyst Recom.": "Strong Buy (1)",
-    "Insider Transactions": "Positive (>0%)",
-    "Price": "$5 to $200",
+    "InsiderTransactions": "Positive (>0%)",
+    "Price": "Over $5",
 }
 SHORT_SCREENER_FILTERS = {
     "Average Volume": "Over 500K",
     "Country": "USA",
-    "Short Float": "High (>10%)",
+    "Float Short": "Over 10%",
     "Performance (Week)": "Down",
-    "Price": "$5 to $200",
+    "Price": "Over $5",
 }
 
 

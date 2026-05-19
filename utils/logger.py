@@ -12,7 +12,9 @@ def get_logger(name: str, log_dir: Path = None) -> logging.Logger:
     logger.setLevel(logging.INFO)
     fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", "%Y-%m-%d %H:%M:%S")
 
-    console = logging.StreamHandler(sys.stdout)
+    import io
+    stream = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace") if hasattr(sys.stdout, "buffer") else sys.stdout
+    console = logging.StreamHandler(stream)
     console.setFormatter(fmt)
     logger.addHandler(console)
 

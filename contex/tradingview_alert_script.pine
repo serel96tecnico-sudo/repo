@@ -1,0 +1,80 @@
+// ============================================================
+// Swing Trade Alert — Claude AI Integration
+// ============================================================
+// Instrucciones:
+// 1. Abre TradingView en cualquier gráfico (timeframe diario recomendado)
+// 2. Abre Pine Script Editor y pega este código
+// 3. Guarda y añade al gráfico
+// 4. Clic derecho en la señal → "Añadir alerta"
+// 5. En "Mensaje de alerta" pon: {{plot("alert_payload")}}
+//    O usa directamente los alertcondition de abajo
+// 6. En "Notificaciones" → activar "Webhook URL"
+// 7. URL: https://XXXX.ngrok-free.app/webhook
+// ============================================================
+
+//@version=5
+indicator("Swing Trade Alerts — Claude AI", overlay=true, max_labels_count=500)
+
+// --- Inputs ---
+ema_fast   = input.int(9,  "EMA Rápida")
+ema_slow   = input.int(21, "EMA Lenta")
+ema_trend  = input.int(50, "EMA Tendencia")
+rsi_len    = input.int(14, "RSI Período")
+rsi_ob     = input.int(70, "RSI Sobrecompra")
+rsi_os     = input.int(30, "RSI Sobreventa")
+vol_mult   = input.float(1.3, "Multiplicador Volumen")
+
+// --- Indicadores ---
+ema9   = ta.ema(close, ema_fast)
+ema21  = ta.ema(close, ema_slow)
+ema50  = ta.ema(close, ema_trend)
+rsi    = ta.rsi(close, rsi_len)
+vol20  = ta.sma(volume, 20)
+atr14  = ta.atr(14)
+
+// --- Señales ---
+// BUY: EMA9 cruza arriba EMA21, precio sobre EMA50, RSI entre 40-65, volumen elevado
+buySignal = ta.crossover(ema9, ema21)
+         and close > ema50
+         and rsi > 40 and rsi < rsi_ob
+         and volume > vol20 * vol_mult
+
+// SELL SHORT: EMA9 cruza abajo EMA21, precio bajo EMA50, RSI entre 35-60, volumen elevado
+sellSignal = ta.crossunder(ema9, ema21)
+          and close < ema50
+          and rsi < 60 and rsi > rsi_os
+          and volume > vol20 * vol_mult
+
+// OVERSOLD BOUNCE: RSI cruza arriba 30 con volumen (posible rebote)
+oversoldBounce = ta.crossover(rsi, rsi_os)
+              and close > ema50
+              and volume > vol20
+
+// --- Visualización ---
+plotshape(buySignal,     "BUY",     shape.triangleup,   location.belowbar, color.new(color.green, 0),  size=size.small)
+plotshape(sellSignal,    "SHORT",   shape.triangledown, location.abovebar, color.new(color.red, 0),    size=size.small)
+plotshape(oversoldBounce,"BOUNCE",  shape.circle,       location.belowbar, color.new(color.orange, 0), size=size.tiny)
+
+plot(ema9,  "EMA 9",  color.new(color.blue, 0),   linewidth=1)
+plot(ema21, "EMA 21", color.new(color.orange, 0), linewidth=1)
+plot(ema50, "EMA 50", color.new(color.gray, 40),  linewidth=2)
+
+// --- Alert conditions ---
+// El mensaje JSON se envía al webhook de Claude
+alertcondition(
+  buySignal,
+  title="BUY Signal",
+  message='{"ticker":"{{ticker}}","action":"BUY","price":{{close}},"volume":{{volume}},"timeframe":"{{interval}}","rsi":{{plot_0}}}'
+)
+
+alertcondition(
+  sellSignal,
+  title="SHORT Signal",
+  message='{"ticker":"{{ticker}}","action":"SHORT","price":{{close}},"volume":{{volume}},"timeframe":"{{interval}}","rsi":{{plot_0}}}'
+)
+
+alertcondition(
+  oversoldBounce,
+  title="Oversold Bounce",
+  message='{"ticker":"{{ticker}}","action":"BOUNCE","price":{{close}},"volume":{{volume}},"timeframe":"{{interval}}","rsi":{{plot_0}}}'
+)

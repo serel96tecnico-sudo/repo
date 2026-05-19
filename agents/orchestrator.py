@@ -213,7 +213,23 @@ class TradingOrchestrator:
             )
 
             is_short = ta.direction == "short"
-            if composite >= 7.5:
+
+            # Regime filter: raise short threshold in bullish/uptrend markets
+            short_min_score = 6.0
+            if scan_result and scan_result.market_conditions:
+                mc = scan_result.market_conditions
+                if mc.spy_trend == "Strong Uptrend":
+                    short_min_score = 8.0
+                elif mc.spy_trend == "Uptrend" or mc.regime.startswith("BULLISH"):
+                    short_min_score = 7.0
+
+            if is_short and composite < short_min_score:
+                rec = "WATCH"
+                self.logger.info(
+                    f"  {ticker}: SHORT demoted to WATCH — regime filter "
+                    f"(score {composite:.1f} < min {short_min_score:.1f} in {getattr(scan_result.market_conditions, 'spy_trend', '?')} market)"
+                )
+            elif composite >= 7.5:
                 rec = "STRONG SELL" if is_short else "STRONG BUY"
             elif composite >= 6.0:
                 rec = "SELL" if is_short else "BUY"
