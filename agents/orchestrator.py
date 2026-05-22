@@ -170,6 +170,15 @@ class TradingOrchestrator:
                 self.logger.info("Telegram notification sent.")
             else:
                 self.logger.warning("Telegram notification failed (non-critical).")
+
+        if self.session == "evening":
+            try:
+                from agents.portfolio_watchdog import run_watchdog
+                self.logger.info("Running portfolio watchdog...")
+                run_watchdog(notify=True)
+            except Exception as e:
+                self.logger.warning(f"Portfolio watchdog error (non-critical): {e}")
+
         return report
 
     def _run_scan_phase(self, prev_context: dict, portfolio: dict = None):

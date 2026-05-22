@@ -1,9 +1,19 @@
+import os
 import time
 import warnings
 import pandas as pd
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
+
+# Fix SSL for environments with proxy/AV certificate interception (e.g. Avast)
+# curl_cffi respects CURL_CA_BUNDLE; set it to certifi's bundle before any import
+try:
+    import certifi as _certifi
+    os.environ.setdefault('CURL_CA_BUNDLE', _certifi.where())
+    os.environ.setdefault('REQUESTS_CA_BUNDLE', _certifi.where())
+except Exception:
+    pass
 
 # yfinance 1.3+ uses curl_cffi — patch SSL verify for corporate/proxy environments
 try:

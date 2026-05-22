@@ -1,5 +1,5 @@
 {
-  "updated": "2026-05-18",
+  "updated": "2026-05-19",
   "description": "DeGiro favourites list",
   "tickers": [
     "NVO", "PDD", "AMD", "GOOGL", "AAPL", "APLD", "APP", "ASTS", "AXON",
@@ -12,6 +12,7 @@
     "LMT", "CRML", "MVIS", "GRAB", "XPEV", "TMQ", "SLNH",
     "LOCL", "MXL", "ORKA", "MRAM", "DGXX", "RXT", "ASML",
     "CIFR", "OPTT", "CMCSA", "META", "ILF",
-    "STNE", "DXCM", "PZZA", "FIG", "AMAT", "LMND", "EOS", "KGC"
+    "STNE", "DXCM", "PZZA", "FIG", "AMAT", "LMND", "EOS", "KGC",
+    "LPK", "IQE", "LWLG", "AEHR", "NOW", "TSM", "VRNS"
   ]
 }

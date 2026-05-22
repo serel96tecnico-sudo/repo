@@ -14,9 +14,23 @@ def main():
     parser.add_argument("--session", choices=["morning", "evening"], default="morning",
                         help="Session label: morning (15:00) or evening (20:30)")
     parser.add_argument("--webhook", action="store_true", help="Start TradingView webhook server")
+    parser.add_argument("--bot", action="store_true", help="Start Telegram command bot (long polling)")
     parser.add_argument("--portfolio-report", action="store_true", help="Generar informe de cartera y P&L mensual")
+    parser.add_argument("--watchdog", action="store_true", help="Analizar posiciones abiertas en busca de señales de giro")
     parser.add_argument("--close-trade", nargs="+", metavar="ARG", help="Registrar operación cerrada: TICKER EXIT_PRICE [NOTAS]")
     args = parser.parse_args()
+
+    if args.watchdog:
+        from agents.portfolio_watchdog import run_watchdog
+        alerts = run_watchdog(notify=True)
+        if alerts:
+            for ticker, broker, signals in alerts:
+                print(f"\n{ticker} ({broker.replace('broker_', 'B')}):")
+                for name, detail in signals:
+                    print(f"  • {name}: {detail}")
+        else:
+            print("Todas las posiciones OK — sin señales de alerta.")
+        return
 
     if args.portfolio_report:
         from agents.portfolio_tracker import PortfolioTracker
@@ -59,6 +73,11 @@ def main():
         net = trade.get("net_pnl_usd") or trade.get("net_pnl_eur") or 0
         print(f"Operación cerrada: {ticker} | Neto: {moneda_sym}{net:+.2f} | {trade['resultado'].upper()}")
         print("Recuerda eliminar la posición de portfolio.json manualmente.")
+        return
+
+    if args.bot:
+        from utils.telegram_bot import run_bot
+        run_bot()
         return
 
     if args.webhook:

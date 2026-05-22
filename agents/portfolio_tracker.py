@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import uuid
 from collections import defaultdict
 from datetime import datetime
@@ -27,7 +28,7 @@ class PortfolioTracker:
         history = self._load_history()
         report = self._build_report(portfolio, history)
         self._save_report(report)
-        print(report.encode("ascii", errors="replace").decode("ascii"))
+        sys.stdout.buffer.write((report + "\n").encode("utf-8", errors="replace"))
         return report
 
     def log_closed_trade(
@@ -115,7 +116,6 @@ class PortfolioTracker:
             "",
             f"Broker 2 (USD):",
             f"  Balance:         ${b2.get('balance_usd', 0):,.2f}",
-            f"  Disponible:      ${b2.get('available_funds_usd', 0):,.2f}",
             f"  Proyectado:      ${b2.get('projected_balance_usd', 0):,.2f}",
         ]
 
@@ -134,16 +134,15 @@ class PortfolioTracker:
                 moneda = p.get("moneda", "USD")
                 sl = p.get("stop_loss")
                 tp = p.get("take_profit")
-                pl = p.get("net_pl_eur") or p.get("net_pl_usd") or 0.0
-                sym = "€" if moneda == "EUR" else "$"
+                pl_eur = p.get("gp_eur") or p.get("net_pl_eur") or 0.0
+                pl_usd = p.get("net_pl_usd") or 0.0
                 bep = p.get("bep_eur") or p.get("bep_usd") or 0
-                sl_str = f"SL {sym}{sl}" if sl else "—"
-                tp_str = f"TP {sym}{tp}" if tp else "—"
-                lines.append(f"    {ticker:<8} {qty:>4} acc | BEP {sym}{bep:.2f} | {sl_str} | {tp_str} | P/L: {sym}{pl:+.2f}")
-                if moneda == "EUR":
-                    open_pnl_eur += pl
-                else:
-                    open_pnl_usd += pl
+                precio = p.get("precio_actual_usd") or p.get("precio_actual_eur") or 0
+                sl_str = f"SL ${sl}" if sl else "—"
+                tp_str = f"TP ${tp}" if tp else "—"
+                pl_str = f"€{pl_eur:+.2f}" if pl_eur else f"${pl_usd:+.2f}"
+                lines.append(f"    {ticker:<6} {qty:>4} acc | Precio ${precio:.2f} | BEP ${bep:.2f} | {sl_str} | {tp_str} | hoy {pl_str}")
+                open_pnl_eur += pl_eur
 
         b2_open = [p for p in positions if p.get("broker") == "broker_2" and p.get("cantidad")]
         if b2_open:

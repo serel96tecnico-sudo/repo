@@ -38,3 +38,14 @@ htmlcov/
 
 # Temporales
 *.tmp
+*.log
+
+# Transcripts y archivos personales
+*.vtt
+transcript_clean.txt
+
+# Claude Code
+.claude/
+
+# Broker 3 positions (datos live sensibles)
+contex/broker3_positions.json
