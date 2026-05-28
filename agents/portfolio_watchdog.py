@@ -19,11 +19,15 @@ logger = get_logger("PortfolioWatchdog", LOGS_DIR)
 
 # Señales de alerta
 SIGNAL_STOP_PROXIMITY   = "STOP CERCANO"       # precio dentro del 3% del SL
+SIGNAL_TP_PROXIMITY     = "TP CERCANO"         # precio dentro del 3% del TP
 SIGNAL_BELOW_BEP        = "BAJO BEP"           # precio bajo precio de entrada
 SIGNAL_RSI_BEARISH      = "RSI BAJISTA"        # RSI < 40 y cayendo
 SIGNAL_MACD_CROSS       = "MACD CRUCE BAJISTA" # MACD cruzó bajo señal
 SIGNAL_BELOW_EMA20      = "BAJO EMA20"         # precio bajo EMA20 + EMA20 cayendo
 SIGNAL_VOLUME_SPIKE_DN  = "VOLUMEN BAJISTA"    # volumen 2x en día negativo
+
+SL_PROXIMITY_PCT = 0.03   # alertar si precio está dentro del 3% del SL
+TP_PROXIMITY_PCT = 0.03   # alertar si precio está dentro del 3% del TP
 
 
 def _load_portfolio() -> dict:
@@ -53,6 +57,7 @@ def _analyze_position(pos: dict) -> list:
     ticker = pos.get("ticker", "?")
     bep = pos.get("bep_usd") or pos.get("bep_eur") or 0
     sl = pos.get("stop_loss")
+    tp = pos.get("take_profit")
     direccion = pos.get("direccion", "long")
 
     df = _fetch_ohlcv(ticker)
@@ -88,8 +93,14 @@ def _analyze_position(pos: dict) -> list:
     # 1. Stop cercano (dentro del 3%)
     if sl and price > 0:
         pct_to_sl = (price - sl) / price
-        if pct_to_sl < 0.03:
+        if 0 <= pct_to_sl < SL_PROXIMITY_PCT:
             signals.append((SIGNAL_STOP_PROXIMITY, f"precio ${price:.2f} a {pct_to_sl*100:.1f}% del SL ${sl}"))
+
+    # 1b. TP cercano (dentro del 3%)
+    if tp and price > 0:
+        pct_to_tp = (tp - price) / price
+        if 0 <= pct_to_tp < TP_PROXIMITY_PCT:
+            signals.append((SIGNAL_TP_PROXIMITY, f"precio ${price:.2f} a {pct_to_tp*100:.1f}% del TP ${tp}"))
 
     # 2. Precio bajo BEP
     if bep and price < bep:
@@ -124,10 +135,18 @@ def _build_telegram_message(alerts: list) -> str:
 
     for ticker, broker, signals in alerts:
         broker_label = broker.replace("broker_", "B")
-        severity = "ALERTA" if len(signals) >= 2 else "AVISO"
+        has_tp = any(n == SIGNAL_TP_PROXIMITY for n, _ in signals)
+        risk_signals = [(n, d) for n, d in signals if n != SIGNAL_TP_PROXIMITY]
+        if has_tp and not risk_signals:
+            severity = "OBJETIVO"
+        elif len(risk_signals) >= 2:
+            severity = "ALERTA"
+        else:
+            severity = "AVISO"
         lines.append(f"{severity} {ticker} ({broker_label}):")
         for name, detail in signals:
-            lines.append(f"  • {name}: {detail}")
+            prefix = "  +" if name == SIGNAL_TP_PROXIMITY else "  •"
+            lines.append(f"{prefix} {name}: {detail}")
         lines.append("")
 
     lines.append("Revisar posiciones antes del cierre.")

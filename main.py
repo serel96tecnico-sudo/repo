@@ -17,8 +17,28 @@ def main():
     parser.add_argument("--bot", action="store_true", help="Start Telegram command bot (long polling)")
     parser.add_argument("--portfolio-report", action="store_true", help="Generar informe de cartera y P&L mensual")
     parser.add_argument("--watchdog", action="store_true", help="Analizar posiciones abiertas en busca de señales de giro")
+    parser.add_argument("--entry-scan", action="store_true", help="Escanear watchlist en busca de señales de entrada")
+    parser.add_argument("--min-signals", type=int, default=2, metavar="N", help="Señales mínimas para alertar en entry-scan (default: 2)")
     parser.add_argument("--close-trade", nargs="+", metavar="ARG", help="Registrar operación cerrada: TICKER EXIT_PRICE [NOTAS]")
     args = parser.parse_args()
+
+    if args.entry_scan:
+        from agents.entry_scanner import run_entry_scanner
+        results = run_entry_scanner(
+            tickers=args.tickers,
+            notify=True,
+            min_signals=args.min_signals,
+        )
+        if results:
+            for r in results:
+                print(f"\n{r['ticker']} @ ${r['price']:.2f}  RSI {r['rsi']}  Vol {r['vol_ratio']}x")
+                for name, detail in r["long_signals"]:
+                    print(f"  LONG  + {name}: {detail}")
+                for name, detail in r["short_signals"]:
+                    print(f"  SHORT - {name}: {detail}")
+        else:
+            print("Sin señales de entrada detectadas.")
+        return
 
     if args.watchdog:
         from agents.portfolio_watchdog import run_watchdog

@@ -48,21 +48,25 @@ def _cartera() -> str:
              f"  Margen libre: €{b1.get('margen_libre_eur', 0):.2f}",
              f"  Dia: {b1.get('dia_bp_eur', 0):+.2f}€  |  Total B/P: {b1.get('total_bp_eur', 0):+.2f}€"]
 
-    b1_pos = [p for p in pf.get("acciones", []) + pf.get("etfs", []) if p["broker"] == "broker_1"]
+    b1_pos = [p for p in pf.get("acciones", []) + pf.get("etfs", [])
+              if p["broker"] == "broker_1" and p.get("cantidad", 0)]
     for p in b1_pos:
         gp = p.get("gp_eur", 0) or 0
         pct = p.get("gp_pct", 0) or 0
-        precio = p.get("precio_actual_usd", p.get("bep_usd", 0))
-        lines.append(f"  {p['ticker']}: ${precio:.2f}  hoy {gp:+.2f}€ ({pct:+.1f}%)")
+        precio = (p.get("precio_actual_usd") or p.get("bep_usd")
+                  or p.get("precio_actual_eur") or p.get("bep_eur") or 0)
+        moneda = "€" if p.get("moneda") == "EUR" else "$"
+        lines.append(f"  {p['ticker']}: {moneda}{precio:.2f}  hoy {gp:+.2f}€ ({pct:+.1f}%)")
 
     lines += ["",
               f"B2 ColmexPro: ${b2.get('balance_usd', 0):.2f}",
               f"  Gross P/L: ${b2.get('open_gross_pl_usd', 0):+.2f}  |  Cash libre: ${b2.get('margin_available_usd', 0):.2f}"]
 
-    b2_pos = [p for p in pf.get("acciones", []) if p["broker"] == "broker_2"]
+    b2_pos = [p for p in pf.get("acciones", [])
+              if p["broker"] == "broker_2" and p.get("cantidad", 0)]
     for p in b2_pos:
         net = p.get("net_pl_usd", 0) or 0
-        precio = p.get("precio_actual_usd", p.get("bep_usd", 0))
+        precio = (p.get("precio_actual_usd") or p.get("bep_usd") or 0)
         lines.append(f"  {p['ticker']}: ${precio:.2f}  net {net:+.2f}$")
 
     lines += ["",
@@ -143,12 +147,70 @@ def _pipeline_async(session: str) -> None:
     threading.Thread(target=run, daemon=True).start()
 
 
+def _watchdog_async() -> None:
+    def run():
+        _send("Analizando posiciones abiertas... (~1 min)")
+        try:
+            from agents.portfolio_watchdog import run_watchdog, SIGNAL_TP_PROXIMITY
+            alerts = run_watchdog(notify=False)
+            if not alerts:
+                _send("Todas las posiciones OK — sin señales de alerta.")
+                return
+            import datetime as dt
+            lines = [f"WATCHDOG — {dt.datetime.now().strftime('%H:%M')}", ""]
+            for ticker, broker, signals in alerts:
+                broker_label = broker.replace("broker_", "B")
+                has_tp = any(n == SIGNAL_TP_PROXIMITY for n, _ in signals)
+                risk = [(n, d) for n, d in signals if n != SIGNAL_TP_PROXIMITY]
+                severity = "OBJETIVO" if has_tp and not risk else ("ALERTA" if len(risk) >= 2 else "AVISO")
+                lines.append(f"{severity} {ticker} ({broker_label}):")
+                for name, detail in signals:
+                    prefix = "  +" if name == SIGNAL_TP_PROXIMITY else "  •"
+                    lines.append(f"{prefix} {name}: {detail}")
+                lines.append("")
+            _send("\n".join(lines))
+        except Exception as e:
+            _send(f"Error en watchdog: {e}")
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+def _scan_async() -> None:
+    def run():
+        _send("Escaneando watchlist en busca de entradas... (~3 min)")
+        try:
+            from agents.entry_scanner import run_entry_scanner
+            results = run_entry_scanner(notify=False)
+            if not results:
+                _send("Sin señales de entrada en este momento.")
+                return
+            import datetime as dt
+            lines = [f"ENTRY SCAN — {dt.datetime.now().strftime('%H:%M')}", ""]
+            for r in results:
+                if r["long_signals"]:
+                    lines.append(f"LONG {r['ticker']} @${r['price']:.2f} RSI {r['rsi']} Vol {r['vol_ratio']}x")
+                    for name, detail in r["long_signals"]:
+                        lines.append(f"  + {name}: {detail}")
+                if r["short_signals"]:
+                    lines.append(f"SHORT {r['ticker']} @${r['price']:.2f} RSI {r['rsi']} Vol {r['vol_ratio']}x")
+                    for name, detail in r["short_signals"]:
+                        lines.append(f"  - {name}: {detail}")
+                lines.append("")
+            _send("\n".join(lines))
+        except Exception as e:
+            _send(f"Error en entry scan: {e}")
+
+    threading.Thread(target=run, daemon=True).start()
+
+
 def _ayuda() -> str:
     return (
         "Comandos disponibles:\n"
         "\n"
         "/cartera        — posiciones actuales (todos los brokers)\n"
         "/precio TICKER  — precio actual de un ticker\n"
+        "/watchdog       — analizar posiciones: SL/TP cercanos, señales de giro\n"
+        "/scan           — escanear watchlist en busca de entradas\n"
         "/pipeline       — lanza analisis sesion manana\n"
         "/pipeline tarde — lanza analisis sesion tarde\n"
         "/cerrar TICKER precio [notas] — calcula P/L de cierre\n"
@@ -175,6 +237,10 @@ def _handle(message: dict) -> None:
         _send(_cartera())
     elif cmd == "precio" and args:
         _send(_precio(args[0]))
+    elif cmd in ("watchdog", "wdog", "posiciones"):
+        _watchdog_async()
+    elif cmd in ("scan", "escanear", "entradas"):
+        _scan_async()
     elif cmd == "pipeline":
         session = "evening" if args and args[0] in ("tarde", "evening") else "morning"
         _pipeline_async(session)
