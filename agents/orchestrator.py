@@ -223,20 +223,51 @@ class TradingOrchestrator:
 
             is_short = ta.direction == "short"
 
-            # Regime filter: raise short threshold in bullish/uptrend markets
+            # Regime adjustment: bonus/malus según tendencia de mercado
+            regime_adj = 0.0
             short_min_score = 6.0
             if scan_result and scan_result.market_conditions:
                 mc = scan_result.market_conditions
-                if mc.spy_trend == "Strong Uptrend":
-                    short_min_score = 8.0
-                elif mc.spy_trend == "Uptrend" or mc.regime.startswith("BULLISH"):
-                    short_min_score = 7.0
+                spy = mc.spy_trend or ""
+                qqq = mc.qqq_trend or ""
+                regime = mc.regime or ""
+
+                bullish = (spy in ("Strong Uptrend", "Uptrend") or regime.startswith("BULLISH"))
+                strong_bullish = spy == "Strong Uptrend"
+                bearish = (spy in ("Strong Downtrend", "Downtrend") or regime.startswith("BEARISH"))
+                strong_bearish = spy == "Strong Downtrend"
+
+                if strong_bullish:
+                    regime_adj = +0.8 if not is_short else -2.0
+                    short_min_score = 8.5
+                elif bullish:
+                    regime_adj = +0.5 if not is_short else -1.2
+                    short_min_score = 7.5
+                elif strong_bearish:
+                    regime_adj = -1.0 if not is_short else +0.8
+                elif bearish:
+                    regime_adj = -0.5 if not is_short else +0.5
+
+                # QQQ confirma: si ambos índices bullish/bearish, amplificar ligeramente
+                if qqq in ("Strong Uptrend", "Uptrend") and bullish:
+                    regime_adj += 0.2 if not is_short else -0.3
+                elif qqq in ("Strong Downtrend", "Downtrend") and bearish:
+                    regime_adj += -0.2 if not is_short else +0.2
+
+            if regime_adj != 0.0:
+                composite_raw = composite
+                composite = round(min(10.0, max(0.0, composite + regime_adj)), 2)
+                self.logger.info(
+                    f"  {ticker}: regime_adj {regime_adj:+.1f} "
+                    f"({'long' if not is_short else 'short'} en {getattr(scan_result.market_conditions, 'spy_trend', '?')}) "
+                    f"→ {composite_raw:.1f} → {composite:.1f}"
+                )
 
             if is_short and composite < short_min_score:
                 rec = "WATCH"
                 self.logger.info(
                     f"  {ticker}: SHORT demoted to WATCH — regime filter "
-                    f"(score {composite:.1f} < min {short_min_score:.1f} in {getattr(scan_result.market_conditions, 'spy_trend', '?')} market)"
+                    f"(score {composite:.1f} < min {short_min_score:.1f})"
                 )
             elif composite >= 7.5:
                 rec = "STRONG SELL" if is_short else "STRONG BUY"

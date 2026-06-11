@@ -1,12 +1,18 @@
+import json
+import os
 import re
 import time
 import requests
 import urllib3
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from agents.base_agent import BaseAgent
 from models.schemas import ScanCandidate, FundamentalResult
-from config import EARNINGS_BLOCK_DAYS, FUNDAMENTAL_TOP_N
+from config import EARNINGS_BLOCK_DAYS, FUNDAMENTAL_TOP_N, CONTEXT_DIR
+
+CACHE_TTL_DAYS          = 7   # días antes de refrescar datos fundamentales
+EARNINGS_REFRESH_DAYS   = 14  # siempre refresca si earnings en menos de X días
 
 urllib3.disable_warnings()
 
@@ -32,6 +38,28 @@ SHORT_SCREENER_FILTERS = {
     "Performance (Week)": "Down",
     "Price": "Over $5",
 }
+# TA screeners — cribado en timeframe semanal/mensual para descubrir nuevos candidatos
+TA_WEEKLY_LONG_FILTERS = {
+    "Average Volume": "Over 500K",
+    "Country": "USA",
+    "Price": "Over $5",
+    "20-Day Simple Moving Average": "Price above SMA20",
+    "50-Day Simple Moving Average": "Price above SMA50",
+    "200-Day Simple Moving Average": "Price above SMA200",
+    "Performance (Week)": "Up",
+    "Performance (Month)": "Up",
+    "RSI (14)": "Not Overbought (60)",
+}
+TA_MONTHLY_BREAKOUT_FILTERS = {
+    "Average Volume": "Over 500K",
+    "Country": "USA",
+    "Price": "Over $5",
+    "52-Week High/Low": "0-10% below High",
+    "200-Day Simple Moving Average": "Price above SMA200",
+    "Performance (Quarter)": "Up",
+    "Performance (Half Year)": "Up",
+    "Relative Volume": "Over 1",
+}
 
 
 class FundamentalAnalyst(BaseAgent):
@@ -48,16 +76,21 @@ class FundamentalAnalyst(BaseAgent):
         rest = scan_candidates[top_n:]
 
         self.logger.info(f"FundamentalAnalyst: analyzing {len(candidates)} candidates")
+        self._cache = self._load_fundcache()
+        cache_hits = 0
 
         fund_map = {}
         filtered = []
 
         for cand in candidates:
             try:
-                data = self._fetch_finviz(cand.ticker)
+                data, from_cache = self._fetch_finviz(cand.ticker)
                 if not data:
                     filtered.append(cand)
                     continue
+
+                if from_cache:
+                    cache_hits += 1
 
                 result = self._build_result(cand.ticker, data, cand.price)
 
@@ -65,7 +98,6 @@ class FundamentalAnalyst(BaseAgent):
                     self.logger.info(f"  BLOCKED {cand.ticker}: {result.block_reason}")
                     continue
 
-                # Enrich company name / sector from Finviz (more accurate than yfinance)
                 if data.get("Company") and data["Company"] not in ("-", ""):
                     cand.company_name = data["Company"]
                 if data.get("Sector") and data["Sector"] not in ("-", ""):
@@ -73,22 +105,25 @@ class FundamentalAnalyst(BaseAgent):
 
                 fund_map[cand.ticker] = result
                 filtered.append(cand)
-                time.sleep(0.35)
+                if not from_cache:
+                    time.sleep(0.35)
 
             except Exception as e:
                 self.logger.warning(f"  {cand.ticker}: Finviz fetch error — {e}")
                 filtered.append(cand)
 
+        self._save_fundcache(self._cache)
         blocked_count = len(candidates) - len(filtered)
 
-        # Discover new candidates via Finviz screener
+        # Screener: solo si caché > CACHE_TTL_DAYS
         existing = {c.ticker for c in filtered + rest}
         new_candidates = self._run_screener(existing, fund_map)
 
         all_candidates = filtered + new_candidates + rest
         self.logger.info(
             f"Fundamental complete: {len(filtered)} kept, {blocked_count} blocked, "
-            f"{len(new_candidates)} new from screener → {len(all_candidates)} total"
+            f"{len(new_candidates)} new from screener → {len(all_candidates)} total "
+            f"(caché hits: {cache_hits}/{len(candidates)})"
         )
         return all_candidates, fund_map
 
@@ -96,9 +131,49 @@ class FundamentalAnalyst(BaseAgent):
     # Data fetching
     # ------------------------------------------------------------------
 
-    def _fetch_finviz(self, ticker: str) -> dict:
+    def _load_fundcache(self) -> dict:
+        path = Path(CONTEXT_DIR) / "fundamentals_cache.json"
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return {"tickers": {}, "screener": {"updated": None, "long": [], "short": []}}
+
+    def _save_fundcache(self, cache: dict) -> None:
+        path = Path(CONTEXT_DIR) / "fundamentals_cache.json"
+        tmp  = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(cache, indent=2, default=str), encoding="utf-8")
+        os.replace(tmp, path)
+
+    def _cache_fresh(self, entry: dict, ttl_days: int = CACHE_TTL_DAYS) -> bool:
+        updated = entry.get("updated")
+        if not updated:
+            return False
+        try:
+            age = (datetime.now() - datetime.fromisoformat(updated)).days
+            return age < ttl_days
+        except Exception:
+            return False
+
+    def _fetch_finviz(self, ticker: str) -> tuple:
+        """Retorna (data_dict, from_cache: bool). Usa caché si datos < CACHE_TTL_DAYS días."""
+        entry = self._cache.get("tickers", {}).get(ticker, {})
+        if entry and self._cache_fresh(entry):
+            # Siempre refresca si earnings próximos
+            days_to_earn = entry.get("data", {}).get("_earnings_days", 999)
+            if days_to_earn > EARNINGS_REFRESH_DAYS:
+                self.logger.debug(f"  {ticker}: caché OK ({entry.get('updated', '')[:10]})")
+                return entry["data"], True
+
+        # Fetch fresco desde Finviz
         from finvizfinance.quote import finvizfinance
-        return finvizfinance(ticker).ticker_fundament()
+        data = finvizfinance(ticker).ticker_fundament()
+        earnings_str = data.get("Earnings", "-") or "-"
+        data["_earnings_days"] = self._parse_earnings_days(earnings_str)
+        self._cache.setdefault("tickers", {})[ticker] = {
+            "updated": datetime.now().isoformat(),
+            "data": data,
+        }
+        return data, False
 
     # ------------------------------------------------------------------
     # Scoring
@@ -210,12 +285,20 @@ class FundamentalAnalyst(BaseAgent):
     # ------------------------------------------------------------------
 
     def _run_screener(self, existing_tickers: set, fund_map: dict) -> list:
+        screener_cache = self._cache.get("screener", {})
+        if self._cache_fresh(screener_cache):
+            self.logger.info("  Screener: caché vigente, omitido")
+            return []
+        self._cache["screener"] = {"updated": datetime.now().isoformat(), "long": [], "short": []}
+
         from finvizfinance.screener.overview import Overview
 
         new_candidates = []
         configs = [
-            (LONG_SCREENER_FILTERS, 8, "long_screener"),
-            (SHORT_SCREENER_FILTERS, 5, "short_screener"),
+            (LONG_SCREENER_FILTERS,        8, "long_screener"),
+            (SHORT_SCREENER_FILTERS,        5, "short_screener"),
+            (TA_WEEKLY_LONG_FILTERS,       10, "ta_weekly_long"),
+            (TA_MONTHLY_BREAKOUT_FILTERS,   8, "ta_monthly_breakout"),
         ]
 
         for filters, limit, label in configs:
@@ -262,7 +345,62 @@ class FundamentalAnalyst(BaseAgent):
             except Exception as e:
                 self.logger.warning(f"Screener {label} failed: {e}")
 
+        if new_candidates:
+            self._update_watchlist(new_candidates)
+
         return new_candidates
+
+    def _update_watchlist(self, new_candidates: list) -> None:
+        """One-in one-out sobre el pool completo (sin distinción de origen).
+        Añade N tickers nuevos y elimina los N más antiguos para mantener el tamaño."""
+        watchlist_path = Path(CONTEXT_DIR) / "watchlist.json"
+        try:
+            data = json.loads(watchlist_path.read_text(encoding="utf-8"))
+        except Exception:
+            return
+
+        # Soporte para formato legacy (solo "tickers") y nuevo (con "entries")
+        entries = data.get("entries")
+        if not entries:
+            entries = [
+                {"ticker": t, "added": data.get("updated", "2000-01-01"), "source": "manual"}
+                for t in data.get("tickers", [])
+            ]
+
+        existing = {e["ticker"] for e in entries}
+        added = []
+        for c in new_candidates:
+            if c.ticker in existing:
+                continue
+            source = c.scan_signals[0] if c.scan_signals else "screener"
+            entries.append({
+                "ticker": c.ticker,
+                "added": datetime.now().strftime("%Y-%m-%d"),
+                "source": source,
+            })
+            existing.add(c.ticker)
+            added.append(c.ticker)
+
+        # One-in one-out: por cada entrada nueva, elimina la más antigua
+        removed = []
+        if added:
+            entries.sort(key=lambda e: e["added"])
+            for _ in added:
+                if len(entries) > len(added):  # no vaciar la lista
+                    removed.append(entries.pop(0)["ticker"])
+
+        data["entries"] = entries
+        data["tickers"] = [e["ticker"] for e in entries]
+        data["updated"] = datetime.now().strftime("%Y-%m-%d")
+
+        tmp = watchlist_path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, watchlist_path)
+
+        self.logger.info(
+            f"  Watchlist: +{len(added)} ({', '.join(added) or 'ninguno'})"
+            + (f" | -{len(removed)} oldest ({', '.join(removed)})" if removed else "")
+        )
 
     # ------------------------------------------------------------------
     # Helpers

@@ -6,7 +6,7 @@ from pathlib import Path
 import anthropic
 
 from agents.base_agent import BaseAgent
-from config import OUTPUT_DIR, FINAL_REPORT_N, SCORE_WEIGHTS
+from config import OUTPUT_DIR, FINAL_REPORT_N, SCORE_WEIGHTS, MODEL_PREMIUM
 from models.schemas import FinalCandidate, DailyReport, MarketConditions, TAResult, SentimentResult, RiskResult
 
 
@@ -24,6 +24,9 @@ IMPORTANTE: Responde SIEMPRE en español."""
 
 
 class ReportWriter(BaseAgent):
+    # Síntesis final del informe (alto valor, pocas llamadas) → modelo premium (Opus 4.8)
+    MODEL = MODEL_PREMIUM
+
     def __init__(self, client: anthropic.Anthropic):
         super().__init__(client)
 
@@ -183,12 +186,19 @@ Narrativa del setup 2 en una sola línea continua sin saltos de línea.
             price_display = fc.current_price if fc.current_price else (risk.entry_price if risk else 0)
             entry_price = risk.entry_price if risk else price_display
             price_vs_entry = f"  ({((price_display - entry_price) / entry_price * 100):+.1f}% vs entry)" if risk and price_display and price_display != entry_price else ""
+
+            extended_warning = ""
+            if risk and price_display and risk.entry_zone_high:
+                overshoot = (price_display - risk.entry_zone_high) / risk.entry_zone_high * 100
+                if overshoot > 5:
+                    extended_warning = f"\n*** EXTENDIDO +{overshoot:.1f}% sobre zona de entrada — ESPERAR PULLBACK ***"
+
             lines += [
                 "",
                 f"#{fc.rank}  {fc.ticker} — {fc.company_name}  [{fc.recommendation} | Score: {fc.composite_score:.1f}]",
                 f"    Dirección: {direction_label}  |  Ejecutar en: {broker_label}",
                 "-" * 60,
-                f"Current Price: ${price_display:.2f}{price_vs_entry}",
+                f"Current Price: ${price_display:.2f}{price_vs_entry}{extended_warning}",
             ]
 
             if risk:

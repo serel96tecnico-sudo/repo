@@ -80,15 +80,21 @@ class MarketDataFetcher:
             logger.warning(f"Alpaca client init failed: {e}")
             return None
 
-    def _fetch_ohlcv_alpaca(self, ticker: str, period: str = "90d") -> pd.DataFrame:
+    def _fetch_ohlcv_alpaca(self, ticker: str, period: str = "90d", timeframe: str = "day") -> pd.DataFrame:
         client = self._get_alpaca_client()
         if client is None:
             return pd.DataFrame()
         try:
             from alpaca.data.requests import StockBarsRequest
-            from alpaca.data.timeframe import TimeFrame
+            from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
 
-            # yfinance "90d" = 90 trading days ≈ 126 calendar days; multiply by 1.42 + buffer
+            tf_map = {
+                "day":   TimeFrame.Day,
+                "hour":  TimeFrame.Hour,
+                "4hour": TimeFrame(4, TimeFrameUnit.Hour),
+            }
+            tf = tf_map.get(timeframe, TimeFrame.Day)
+
             num = int("".join(filter(str.isdigit, period))) if any(c.isdigit() for c in period) else 90
             if "mo" in period:
                 cal_days = num * 42
@@ -99,7 +105,7 @@ class MarketDataFetcher:
 
             request = StockBarsRequest(
                 symbol_or_symbols=ticker,
-                timeframe=TimeFrame.Day,
+                timeframe=tf,
                 start=datetime.now() - timedelta(days=cal_days),
                 end=datetime.now(),
                 feed="iex",
@@ -207,6 +213,10 @@ class MarketDataFetcher:
             return []
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
+            # Nuevo formato con entries; fallback a tickers legacy
+            entries = data.get("entries")
+            if entries:
+                return [e["ticker"] for e in entries]
             tickers = data.get("tickers", [])
             if tickers:
                 return tickers
@@ -214,27 +224,36 @@ class MarketDataFetcher:
             pass
         return []
 
-    def fetch_ohlcv(self, ticker: str, period: str = "90d") -> pd.DataFrame:
+    def fetch_ohlcv(self, ticker: str, period: str = "90d", timeframe: str = "day") -> pd.DataFrame:
         # Alpaca primary
-        df = self._fetch_ohlcv_alpaca(ticker, period)
+        df = self._fetch_ohlcv_alpaca(ticker, period, timeframe)
         if not df.empty:
-            # Patch last bar with live intraday price during market hours
-            try:
-                intraday = yf.Ticker(ticker).history(period="1d", interval="5m", auto_adjust=True)
-                if not intraday.empty:
-                    last_price = float(intraday["Close"].iloc[-1])
-                    last_vol = float(intraday["Volume"].sum())
-                    df.iloc[-1, df.columns.get_loc("Close")] = last_price
-                    if last_vol > 0:
-                        df.iloc[-1, df.columns.get_loc("Volume")] = last_vol
-            except Exception:
-                pass
+            # Patch last bar with live price — solo para velas diarias
+            if timeframe == "day":
+                try:
+                    intraday = yf.Ticker(ticker).history(period="1d", interval="5m", auto_adjust=True)
+                    if not intraday.empty:
+                        last_price = float(intraday["Close"].iloc[-1])
+                        last_vol = float(intraday["Volume"].sum())
+                        df.iloc[-1, df.columns.get_loc("Close")] = last_price
+                        if last_vol > 0:
+                            df.iloc[-1, df.columns.get_loc("Volume")] = last_vol
+                except Exception:
+                    pass
             return df
         # yfinance fallback
         logger.warning(f"{ticker}: Alpaca empty, trying yfinance fallback")
         try:
-            df = yf.Ticker(ticker).history(period=period, auto_adjust=True)
-            df = df[["Open", "High", "Low", "Close", "Volume"]].dropna()
+            if timeframe == "4hour":
+                raw = yf.Ticker(ticker).history(period=period, interval="1h", auto_adjust=True)
+                raw = raw[["Open", "High", "Low", "Close", "Volume"]].dropna()
+                df = raw.resample("4h").agg({
+                    "Open": "first", "High": "max", "Low": "min",
+                    "Close": "last", "Volume": "sum",
+                }).dropna()
+            else:
+                df = yf.Ticker(ticker).history(period=period, auto_adjust=True)
+                df = df[["Open", "High", "Low", "Close", "Volume"]].dropna()
             return df
         except Exception as e:
             logger.warning(f"{ticker}: yfinance also failed: {e}")

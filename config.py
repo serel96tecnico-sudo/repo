@@ -9,7 +9,15 @@ CONTEXT_DIR = ROOT_DIR / "contex"
 OUTPUT_DIR = ROOT_DIR / "output"
 LOGS_DIR = ROOT_DIR / "output" / "logs"
 
-ANTHROPIC_MODEL = "claude-sonnet-4-6"
+# Niveles de modelo por coste (input/output por MTok):
+#   Sonnet 4.6  $3 / $15   — fases mecánicas y de alto volumen
+#   Opus 4.8    $5 / $25   — decisiones críticas (riesgo, informe final)
+#   Fable 5     $10 / $50  — máxima capacidad (no usado por defecto)
+MODEL_CHEAP = "claude-sonnet-4-6"
+MODEL_PREMIUM = "claude-opus-4-8"
+
+# Modelo global por defecto (fallback para agentes sin override y scripts auxiliares)
+ANTHROPIC_MODEL = MODEL_CHEAP
 ANTHROPIC_MAX_TOKENS = 4096
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
@@ -21,7 +29,7 @@ RISK_TOP_N = 10
 FINAL_REPORT_N = 4
 EARNINGS_BLOCK_DAYS = 3
 
-MIN_PRICE = 4.0
+MIN_PRICE = 1.0
 MAX_PRICE = 5000.0
 MIN_AVG_VOLUME = 500_000
 MIN_MARKET_CAP = 1_000_000_000

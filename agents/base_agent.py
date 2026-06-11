@@ -10,6 +10,10 @@ from utils.logger import get_logger
 
 
 class BaseAgent(ABC):
+    # Subclases pueden sobrescribir MODEL para usar un nivel distinto al global.
+    # None → usa ANTHROPIC_MODEL (config global).
+    MODEL = None
+
     def __init__(self, client: anthropic.Anthropic, logger: logging.Logger = None):
         self.client = client
         self.logger = logger or get_logger(self.__class__.__name__, LOGS_DIR)
@@ -20,7 +24,7 @@ class BaseAgent(ABC):
 
     def _do_call(self, system: str, user: str, max_tokens: int) -> str:
         response = self.client.messages.create(
-            model=ANTHROPIC_MODEL,
+            model=self.MODEL or ANTHROPIC_MODEL,
             max_tokens=max_tokens,
             system=[
                 {

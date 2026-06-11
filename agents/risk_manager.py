@@ -5,7 +5,7 @@ import anthropic
 from agents.base_agent import BaseAgent
 from config import (
     PORTFOLIO_VALUE, MAX_POSITION_PCT, MIN_RR_RATIO, ATR_STOP_MULTIPLIER, RISK_TOP_N,
-    MIN_RISK_PER_TRADE, MAX_RISK_PER_TRADE,
+    MIN_RISK_PER_TRADE, MAX_RISK_PER_TRADE, MODEL_PREMIUM,
 )
 from models.schemas import TAResult, SentimentResult, RiskResult
 
@@ -28,6 +28,9 @@ Be concise and actionable."""
 
 
 class RiskManager(BaseAgent):
+    # Decisión crítica de gestión de riesgo → modelo premium (Opus 4.8)
+    MODEL = MODEL_PREMIUM
+
     def __init__(self, client: anthropic.Anthropic):
         super().__init__(client)
 

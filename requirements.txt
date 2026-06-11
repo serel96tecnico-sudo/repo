@@ -13,3 +13,4 @@ flask>=3.0.0
 mcp>=1.0.0
 finvizfinance>=0.14.0
 alpaca-py>=0.20.0
+tradingview-ta>=3.3.0

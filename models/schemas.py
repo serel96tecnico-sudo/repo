@@ -39,6 +39,7 @@ class ScanCandidate:
     low_52w: float
     scan_signals: list = field(default_factory=list)
     initial_score: float = 0.0
+    setup_direction: str = "long"  # "long" | "short" — dirección del setup según scoring
 
     def to_dict(self) -> dict:
         return asdict(self)
