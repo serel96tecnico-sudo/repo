@@ -92,12 +92,16 @@ class RiskManager(BaseAgent):
                 # CORTO: entrada cerca de resistencia, stop por encima, targets en soportes
                 if near_market:
                     entry = round(price, 2)
-                elif resistance:
+                elif resistance and resistance[0] <= price * 1.015:
+                    # Resistencia cerca (≤1.5% por encima) — entrada límite en resistencia
                     entry = round(resistance[0] * 0.999, 2)
-                elif price < ema9 * 1.01:
-                    entry = round(ema9 * 0.999, 2)
+                elif price < ema9:
+                    # Precio ya por debajo de EMA9 — esperar pullback al rebote a EMA9
+                    # (no entrar al precio actual: estaríamos vendiendo en el fondo de la caída)
+                    entry = round(ema9 * 0.998, 2)
                 else:
-                    entry = round(price, 2)
+                    # Precio sobre EMA9 — entrada límite cerca de EMA9/EMA21 (resistencia dinámica)
+                    entry = round(min(price, max(ema9, ema21) * 1.002), 2)
 
                 entry_zone_low = round(entry * 0.995, 2)
                 entry_zone_high = round(entry * 1.005, 2)
@@ -125,10 +129,12 @@ class RiskManager(BaseAgent):
                 # LARGO: entrada cerca de soporte, stop por debajo, targets en resistencias
                 if near_market:
                     entry = round(price, 2)
-                elif support and support[0] > price * 0.97:
+                elif support and support[0] >= price * 0.985:
+                    # Soporte cerca (≤1.5% por debajo) — entrada límite sobre soporte
                     entry = round(support[0] * 1.002, 2)
                 elif price > ema9 * 0.99:
-                    entry = round(ema9 * 1.001, 2)
+                    # Precio sobre EMA9 — entrada a mercado
+                    entry = round(price, 2)
                 else:
                     entry = round(price, 2)
 

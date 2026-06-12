@@ -225,7 +225,10 @@ class TradingOrchestrator:
 
             # Regime adjustment: bonus/malus según tendencia de mercado
             regime_adj = 0.0
-            short_min_score = 6.0
+            # Umbral por defecto exigente para cortos: en mercado neutral/ambiguo un
+            # corto necesita una señal técnica fuerte (7.5), no apenas aprobado (6.0).
+            short_min_score = 7.5
+            block_short = False
             if scan_result and scan_result.market_conditions:
                 mc = scan_result.market_conditions
                 spy = mc.spy_trend or ""
@@ -239,14 +242,19 @@ class TradingOrchestrator:
 
                 if strong_bullish:
                     regime_adj = +0.8 if not is_short else -2.0
-                    short_min_score = 8.5
+                    short_min_score = 9.0
+                    # Mercado claramente alcista: no abrir cortos salvo señal excepcional
+                    block_short = is_short
                 elif bullish:
                     regime_adj = +0.5 if not is_short else -1.2
-                    short_min_score = 7.5
+                    short_min_score = 8.5
                 elif strong_bearish:
                     regime_adj = -1.0 if not is_short else +0.8
+                    # Mercado claramente bajista: cortos a favor de tendencia, umbral normal
+                    short_min_score = 6.5
                 elif bearish:
                     regime_adj = -0.5 if not is_short else +0.5
+                    short_min_score = 7.0
 
                 # QQQ confirma: si ambos índices bullish/bearish, amplificar ligeramente
                 if qqq in ("Strong Uptrend", "Uptrend") and bullish:
@@ -263,7 +271,13 @@ class TradingOrchestrator:
                     f"→ {composite_raw:.1f} → {composite:.1f}"
                 )
 
-            if is_short and composite < short_min_score:
+            if is_short and block_short:
+                rec = "WATCH"
+                self.logger.info(
+                    f"  {ticker}: SHORT demoted to WATCH — blocked "
+                    f"(mercado claramente alcista, no abrir cortos)"
+                )
+            elif is_short and composite < short_min_score:
                 rec = "WATCH"
                 self.logger.info(
                     f"  {ticker}: SHORT demoted to WATCH — regime filter "
