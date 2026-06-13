@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Strategy & risk policy (READ FIRST for any change to scoring/sizing/exposure)
+
+The trading strategy and risk policy are defined explicitly in **[docs/estrategia_riesgo.md](docs/estrategia_riesgo.md)** — the operator's decisions, not model defaults. Before changing scoring, position sizing, exposure, or concentration, read it. Core rules: momentum/high-beta tilt with a **dynamic high-beta exposure cap by regime** (R1), **per-sub-theme concentration limit** to avoid correlated blow-ups like the 2026-06-05 cluster (R2), and **half-size new speculative longs when VIX≥20 + NEUTRAL regime** (R3). Parameters live in §4 of that doc (not yet wired into config.py). Do not silently override these.
+
 ## What this project does
 
 A swing trading agent that runs a daily multi-agent AI pipeline to scan a custom watchlist of ~82 tickers (contex/watchlist.json), perform fundamental and technical analysis, assess news sentiment, and generate ranked trade recommendations (long and short) with full risk parameters. Results are delivered via text/JSON reports and optionally via Telegram.
