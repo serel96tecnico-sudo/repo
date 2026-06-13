@@ -17,12 +17,10 @@ Responde SIEMPRE en español. Sé directo y concreto."""
 
 client = anthropic.Anthropic(
     api_key=ANTHROPIC_API_KEY,
-    http_client=httpx.Client(verify=False),
+    http_client=httpx.Client(),
 )
 
 fetcher = NewsFetcher(delay_seconds=1.0)
-# SSL bypass for requests session
-fetcher._session.verify = False
 
 all_news = {}
 print("Obteniendo noticias...")

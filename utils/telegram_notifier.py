@@ -34,7 +34,7 @@ def _send_message(token: str, chat_id: str, text: str) -> bool:
     url = TELEGRAM_API.format(token=token, method="sendMessage")
     chunks = [text[i:i+4096] for i in range(0, len(text), 4096)]
     for chunk in chunks:
-        resp = requests.post(url, json={"chat_id": chat_id, "text": chunk}, timeout=15, verify=False)
+        resp = requests.post(url, json={"chat_id": chat_id, "text": chunk}, timeout=15)
         if not resp.ok:
             logger.error(f"Telegram API error {resp.status_code}: {resp.text}")
             return False

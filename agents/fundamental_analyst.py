@@ -3,7 +3,6 @@ import os
 import re
 import time
 import requests
-import urllib3
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -13,15 +12,6 @@ from config import EARNINGS_BLOCK_DAYS, FUNDAMENTAL_TOP_N, CONTEXT_DIR
 
 CACHE_TTL_DAYS          = 7   # días antes de refrescar datos fundamentales
 EARNINGS_REFRESH_DAYS   = 14  # siempre refresca si earnings en menos de X días
-
-urllib3.disable_warnings()
-
-# SSL patch for finviz (same proxy workaround as Alpaca)
-_orig_req = requests.Session.request
-def _no_ssl(self, method, url, **kwargs):
-    kwargs.setdefault("verify", False)
-    return _orig_req(self, method, url, **kwargs)
-requests.Session.request = _no_ssl
 
 # Screener filter keys that finvizfinance accepts
 LONG_SCREENER_FILTERS = {

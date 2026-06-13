@@ -5,23 +5,6 @@ Provides TA summaries, all indicator values, and batch screener queries.
 Historical OHLCV is delegated to the existing MarketDataFetcher (Alpaca/yfinance).
 """
 
-import warnings
-import requests
-import urllib3
-
-# SSL patch — same AV/proxy issue as market_data.py
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-warnings.filterwarnings("ignore", message="Unverified HTTPS")
-_orig_session_req = requests.Session.request
-
-
-def _no_verify_req(self, method, url, **kw):
-    kw.setdefault("verify", False)
-    return _orig_session_req(self, method, url, **kw)
-
-
-requests.Session.request = _no_verify_req
-
 from typing import Dict, List, Any
 from utils.logger import get_logger
 

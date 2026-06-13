@@ -18,7 +18,7 @@ _API = "https://api.telegram.org/bot{token}/{method}"
 def _api(method: str, **kwargs) -> dict:
     url = _API.format(token=TELEGRAM_BOT_TOKEN, method=method)
     try:
-        resp = requests.post(url, json=kwargs, timeout=35, verify=False)
+        resp = requests.post(url, json=kwargs, timeout=35)
         return resp.json()
     except Exception as e:
         logger.error(f"Telegram API error ({method}): {e}")

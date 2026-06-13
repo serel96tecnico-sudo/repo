@@ -2,6 +2,18 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
+# Verificación TLS contra el almacén de certificados de Windows.
+# Avast (Web/Mail Shield) intercepta el HTTPS y lo re-firma con su propia CA;
+# esa CA es de confianza en Windows pero no está en el bundle de certifi, así
+# que sin esto cualquier verificación normal fallaría. Se hace aquí porque
+# config se importa en todos los puntos de entrada antes de cualquier I/O de red,
+# y deja TLS verificado de forma limpia para requests y httpx en todo el proyecto.
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
+
 load_dotenv(override=True)
 
 ROOT_DIR = Path(__file__).parent

@@ -64,15 +64,6 @@ class MarketDataFetcher:
         if not ALPACA_API_KEY or not ALPACA_API_SECRET:
             return None
         try:
-            import requests as _req
-            import urllib3
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            _orig_req = _req.Session.request
-            def _no_verify_req(self, method, url, **kwargs):
-                kwargs.setdefault("verify", False)
-                return _orig_req(self, method, url, **kwargs)
-            _req.Session.request = _no_verify_req
-
             from alpaca.data.historical import StockHistoricalDataClient
             self._alpaca_client = StockHistoricalDataClient(ALPACA_API_KEY, ALPACA_API_SECRET)
             return self._alpaca_client

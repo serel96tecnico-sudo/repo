@@ -38,7 +38,7 @@ class TradingOrchestrator:
 
         self.client = anthropic.Anthropic(
             api_key=ANTHROPIC_API_KEY,
-            http_client=httpx.Client(verify=False),
+            http_client=httpx.Client(),
         )
         self.data_fetcher = MarketDataFetcher(CONTEXT_DIR)
         self.news_fetcher = NewsFetcher()

@@ -161,7 +161,7 @@ def _send_telegram(text: str) -> None:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         for chunk in [text[i:i+4096] for i in range(0, len(text), 4096)]:
             requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": chunk},
-                         timeout=10, verify=False)
+                         timeout=10)
     except Exception as e:
         logger.warning(f"Telegram send error: {e}")
 
