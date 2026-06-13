@@ -1,0 +1,318 @@
+{
+  "description": "Historico acumulado de trades cerrados",
+  "created": "2026-06-11",
+  "trades": [
+    {
+      "ticker": "AMD",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 2,
+      "entrada_usd": 481.87,
+      "cierre_usd": 463.0,
+      "net_pl_eur": -39.68,
+      "fecha_entrada": "2026-06-09",
+      "fecha_cierre": "2026-06-10",
+      "nota": "SL ejecutado @$463.00. Entrada $481.87. Comisiones -€4.08. Net -€39.68."
+    },
+    {
+      "ticker": "KGC",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 30,
+      "entrada_usd": 24.99,
+      "cierre_usd": 24.47,
+      "gross_pl_usd": 15.6,
+      "net_pl_usd": 5.6,
+      "fecha_entrada": "2026-06-09",
+      "fecha_cierre": "2026-06-10",
+      "nota": "SHORT @$24.99. Cobertura @$24.47 (apertura). Gross +$15.60. Net ~+$5.60. TP $22.50 no alcanzado — cierre manual."
+    },
+    {
+      "ticker": "HIMS",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 50,
+      "entrada_usd": 28.25,
+      "cierre_usd": 28.85,
+      "gross_pl_usd": 30.0,
+      "net_pl_usd": 25.0,
+      "fecha_entrada": "2026-06-09",
+      "fecha_cierre": "2026-06-10",
+      "nota": "SL trailing @$28.85 (16:31). Net ~+$25. Re-entrada abierta broker_1 @$27.83 (25 acc, 10/06 21:39)."
+    },
+    {
+      "ticker": "WULF",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 25,
+      "entrada_usd": 24.64,
+      "cierre_usd": 28.0,
+      "net_pl_usd": 79.0,
+      "fecha_entrada": "2026-06-05",
+      "fecha_cierre": "2026-06-09",
+      "nota": "TP $28.00 ejecutado. Net estimado +$79.00."
+    },
+    {
+      "ticker": "NVO",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 20,
+      "entrada_usd": 41.57,
+      "cierre_usd": 38.57,
+      "net_pl_usd": 55.0,
+      "fecha_entrada": "2026-06-08",
+      "fecha_cierre": "2026-06-09",
+      "nota": "TP $38.57 ejecutado. Net estimado +$55.00."
+    },
+    {
+      "ticker": "AAPL",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 5,
+      "entrada_usd": 307.827,
+      "cierre_usd": 298.03,
+      "net_pl_eur": -51.59,
+      "fecha_entrada": "2026-06-04",
+      "fecha_cierre": "2026-06-09",
+      "nota": "Cerrada manualmente @$298.03. Net -€51.59."
+    },
+    {
+      "ticker": "CRM",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 4,
+      "entrada_usd": 186.1,
+      "cierre_usd": 186.71,
+      "net_pl_usd": -2.56,
+      "fecha_entrada": "2026-06-05",
+      "fecha_cierre": "2026-06-05",
+      "nota": "TP demasiado ajustado, cierre por error. Net -$2.56."
+    },
+    {
+      "ticker": "RGTI",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 40,
+      "entrada_usd": 24.48,
+      "cierre_usd": 21.5,
+      "net_pl_eur": -109.0,
+      "fecha_entrada": "2026-06-03",
+      "fecha_cierre": "2026-06-05",
+      "nota": "SL @$21.50. Net ~-€109."
+    },
+    {
+      "ticker": "GRAB",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 150,
+      "entrada_usd": 3.61,
+      "cierre_usd": 3.35,
+      "net_pl_usd": -41.5,
+      "fecha_entrada": "2026-05-27",
+      "fecha_cierre": "2026-06-05",
+      "nota": "SL @$3.35. Net -$41.50."
+    },
+    {
+      "ticker": "QBTS",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 25,
+      "entrada_usd": 29.3,
+      "cierre_usd": 25.01,
+      "net_pl_eur": -96.0,
+      "fecha_entrada": "2026-05-28",
+      "fecha_cierre": "2026-06-05",
+      "nota": "SL @$25.01. Net ~-€96."
+    },
+    {
+      "ticker": "IREN",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 12,
+      "entrada_usd": 64.955833,
+      "cierre_usd": 58.83,
+      "net_pl_eur": -69.44,
+      "fecha_entrada": "2026-05-19",
+      "fecha_cierre": "2026-06-05",
+      "nota": "SL @$58.83. Net -€69.44. Nueva posición IREN LONG abierta en Colmex Pro @$55.37."
+    },
+    {
+      "ticker": "OPEN",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 180,
+      "entrada_usd": 5.0,
+      "cierre_usd": 4.67,
+      "net_pl_usd": -61.9,
+      "fecha_entrada": "2026-06-04",
+      "fecha_cierre": "2026-06-05",
+      "nota": "SL @$4.67. Net -$61.90."
+    },
+    {
+      "ticker": "ONDS",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 80,
+      "entrada_usd": 12.34,
+      "cierre_usd": 10.9,
+      "net_pl_usd": -117.7,
+      "fecha_entrada": "2026-06-04",
+      "fecha_cierre": "2026-06-05",
+      "nota": "SL @$10.90. Net -$117.70."
+    },
+    {
+      "ticker": "AMD",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 2,
+      "entrada_usd": 542.3,
+      "cierre_usd": 509.49,
+      "net_pl_usd": 63.12,
+      "fecha_entrada": "2026-06-03",
+      "fecha_cierre": "2026-06-04",
+      "nota": "Net +$63.12."
+    },
+    {
+      "ticker": "NVO",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 12,
+      "entrada_usd": 42.15,
+      "cierre_usd": 43.17,
+      "net_pl_usd": -17.24,
+      "fecha_entrada": "2026-06-03",
+      "fecha_cierre": "2026-06-04",
+      "nota": "SL @$43.17. Net -$17.24."
+    },
+    {
+      "ticker": "TSLA",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 4,
+      "entrada_usd": 417.06,
+      "cierre_usd": 422.41,
+      "net_pl_eur": 13.13,
+      "fecha_entrada": "2026-06-02",
+      "fecha_cierre": "2026-06-03",
+      "nota": "Net ~+€13."
+    },
+    {
+      "ticker": "GOOGL",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 2,
+      "entrada_usd": 363.95,
+      "cierre_usd": 360.04,
+      "net_pl_usd": 2.82,
+      "fecha_entrada": "2026-06-02",
+      "fecha_cierre": "2026-06-03",
+      "nota": "Net +$2.82."
+    },
+    {
+      "ticker": "CRCL",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 5,
+      "entrada_usd": 101.11,
+      "cierre_usd": 92.95,
+      "net_pl_usd": 35.8,
+      "fecha_entrada": "2026-06-02",
+      "fecha_cierre": "2026-06-03",
+      "nota": "Net +$35.80."
+    },
+    {
+      "ticker": "NOW",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 7,
+      "entrada_usd": 134.48,
+      "cierre_usd": 125.25,
+      "net_pl_usd": 62.11,
+      "fecha_entrada": "2026-06-01",
+      "fecha_cierre": "2026-06-02",
+      "nota": "Net +$62.11."
+    },
+    {
+      "ticker": "OSCR",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 25,
+      "entrada_usd": 22.42,
+      "cierre_usd": 20.88,
+      "net_pl_usd": -41.0,
+      "fecha_entrada": "2026-05-22",
+      "fecha_cierre": "2026-06-02",
+      "nota": "SL @$20.88. Net -$41.00."
+    },
+    {
+      "ticker": "CLSK",
+      "broker": "broker_1",
+      "net_pl_eur": 213.33,
+      "fecha_cierre": "2026-06-01",
+      "nota": "TP @$19.00. Net +€213.33."
+    },
+    {
+      "ticker": "IONQ",
+      "broker": "broker_2",
+      "net_pl_usd": 99.1,
+      "fecha_cierre": "2026-05-29",
+      "nota": "TP @$72.00. Net +$99.10."
+    },
+    {
+      "ticker": "CIFR",
+      "broker": "broker_1",
+      "net_pl_eur": -162.04,
+      "fecha_cierre": "2026-05-29",
+      "nota": "SL @$22.99. Net -€162.04."
+    },
+    {
+      "ticker": "AMD",
+      "broker": "broker_1",
+      "net_pl_eur": 83.34,
+      "fecha_cierre": "2026-05-28",
+      "nota": "TP $525.00. Net +€83.34."
+    },
+    {
+      "ticker": "APP",
+      "broker": "broker_1",
+      "net_pl_eur": 140.12,
+      "fecha_cierre": "2026-05-27",
+      "nota": "TP $575.00. Net +€140.12."
+    },
+    {
+      "ticker": "NVO",
+      "broker": "broker_1",
+      "net_pl_eur": 20.99,
+      "fecha_cierre": "2026-05-27",
+      "nota": "Cierre manual. Net +€20.99."
+    },
+    {
+      "ticker": "MRVL",
+      "broker": "broker_1",
+      "net_pl_eur": 111.8,
+      "fecha_cierre": "2026-05-26",
+      "nota": "Net +€111.80."
+    },
+    {
+      "ticker": "RGTI",
+      "broker": "broker_2",
+      "net_pl_usd": 76.5,
+      "fecha_cierre": "2026-05-26",
+      "nota": "Net +$76.50."
+    },
+    {
+      "ticker": "IONQ",
+      "broker": "broker_1",
+      "net_pl_eur": 133.76,
+      "fecha_cierre": "2026-05-22",
+      "nota": "TP @$63.00. Net +€133.76."
+    },
+    {
+      "ticker": "DFDV",
+      "broker": "broker_1",
+      "net_pl_eur": -35.09,
+      "fecha_cierre": "2026-05-15",
+      "nota": "SL. Net -€35.09."
+    }
+  ]
+}

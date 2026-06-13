@@ -1,6 +1,9 @@
+import json
+import os
 import threading
 import time
 import requests
+from datetime import date
 from pathlib import Path
 
 from config import (
@@ -123,7 +126,40 @@ def _cerrar(args: list) -> str:
     ]
     if notas:
         lines.append(f"Notas: {notas}")
+
+    # Persistir en histórico acumulado
+    _append_trade_historico({
+        "ticker":        ticker,
+        "broker":        pos.get("broker", "?"),
+        "direccion":     direccion,
+        "cantidad":      qty,
+        "entrada_usd":   entry,
+        "cierre_usd":    exit_price,
+        "net_pl_usd":    round(net, 2),
+        "gross_pl_usd":  round(gross, 2),
+        "fecha_entrada": pos.get("fecha_entrada", ""),
+        "fecha_cierre":  date.today().isoformat(),
+        "nota":          notas,
+    })
+
     return "\n".join(lines)
+
+
+def _append_trade_historico(trade: dict) -> None:
+    """Añade un trade cerrado a contex/trades_historico.json de forma atómica."""
+    hist_path = Path(CONTEXT_DIR) / "trades_historico.json"
+    try:
+        if hist_path.exists():
+            data = json.loads(hist_path.read_text(encoding="utf-8"))
+        else:
+            data = {"description": "Historico acumulado de trades cerrados",
+                    "created": date.today().isoformat(), "trades": []}
+        data["trades"].append(trade)
+        tmp = hist_path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, hist_path)
+    except Exception as e:
+        logger.warning(f"No se pudo guardar trade en historico: {e}")
 
 
 def _pipeline_async(session: str) -> None:
