@@ -1,5 +1,5 @@
 {
-  "updated": "2026-06-11",
+  "updated": "2026-06-14",
   "description": "DeGiro favourites list",
   "entries": [
     {"ticker": "NVO",   "added": "2026-05-27", "source": "manual"},
@@ -108,7 +108,10 @@
     {"ticker": "WULF",  "added": "2026-05-27", "source": "manual"},
     {"ticker": "BIDU",  "added": "2026-05-27", "source": "manual"},
     {"ticker": "NOK",   "added": "2026-05-27", "source": "manual"},
-    {"ticker": "DXYZ",  "added": "2026-05-27", "source": "manual"}
+    {"ticker": "DXYZ",  "added": "2026-05-27", "source": "manual"},
+    {"ticker": "MU",    "added": "2026-06-14", "source": "manual"},
+    {"ticker": "SNDK",  "added": "2026-06-14", "source": "manual"},
+    {"ticker": "BE",    "added": "2026-06-14", "source": "manual"}
   ],
   "tickers": [
     "NVO", "PDD", "AMD", "GOOGL", "AAPL", "APLD", "APP", "ASTS", "AXON",
@@ -125,6 +128,6 @@
     "LWLG", "AEHR", "NOW", "TSM", "VRNS",
     "OUST", "LUNR",
     "CELH", "ANF", "BEAM", "MNTS", "ENSG", "HCA", "GLD", "COST", "MSFT", "CRM", "DPZ", "DLTR", "HLR", "BYDDY",
-    "ONDS", "AXTI", "HUMA", "WULF", "BIDU", "NOK", "DXYZ"
+    "ONDS", "AXTI", "HUMA", "WULF", "BIDU", "NOK", "DXYZ", "MU", "SNDK", "BE"
   ]
 }

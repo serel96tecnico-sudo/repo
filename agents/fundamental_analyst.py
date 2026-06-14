@@ -50,6 +50,29 @@ TA_MONTHLY_BREAKOUT_FILTERS = {
     "Performance (Half Year)": "Up",
     "Relative Volume": "Over 1",
 }
+# Gappers — descubrimiento DIARIO de valores que se disparan HOY por noticia/evento.
+# A diferencia de los screeners de arriba: corre en cada sesión (no cada 7 días),
+# NO excluye sobrecompra (un gapper es sobrecomprado por definición) y NO depende
+# de que el ticker esté en la watchlist. Son candidatos efímeros: se analizan hoy
+# pero no se persisten en watchlist.json.
+GAPPERS_ENABLED = True
+GAPPERS_LIMIT   = 10   # por dirección
+GAPPERS_LONG_FILTERS = {
+    "Average Volume": "Over 500K",
+    "Country": "USA",
+    "Industry": "Stocks only (ex-Funds)",   # excluye ETFs/ETPs apalancados
+    "Price": "Over $5",
+    "Change": "Up 5%",
+    "Relative Volume": "Over 1.5",
+}
+GAPPERS_SHORT_FILTERS = {
+    "Average Volume": "Over 500K",
+    "Country": "USA",
+    "Industry": "Stocks only (ex-Funds)",   # excluye ETFs/ETPs apalancados
+    "Price": "Over $5",
+    "Change": "Down 5%",
+    "Relative Volume": "Over 1.5",
+}
 
 
 class FundamentalAnalyst(BaseAgent):
@@ -105,15 +128,18 @@ class FundamentalAnalyst(BaseAgent):
         self._save_fundcache(self._cache)
         blocked_count = len(candidates) - len(filtered)
 
-        # Screener: solo si caché > CACHE_TTL_DAYS
+        # Screener semanal: descubre nuevos candidatos (solo si caché > CACHE_TTL_DAYS)
         existing = {c.ticker for c in filtered + rest}
         new_candidates = self._run_screener(existing, fund_map)
 
-        all_candidates = filtered + new_candidates + rest
+        # Screener de gappers: descubrimiento DIARIO de disparos por noticia/evento
+        gappers = self._run_gappers_screener(existing, fund_map)
+
+        all_candidates = filtered + new_candidates + gappers + rest
         self.logger.info(
             f"Fundamental complete: {len(filtered)} kept, {blocked_count} blocked, "
-            f"{len(new_candidates)} new from screener → {len(all_candidates)} total "
-            f"(caché hits: {cache_hits}/{len(candidates)})"
+            f"{len(new_candidates)} new from screener, {len(gappers)} gappers "
+            f"→ {len(all_candidates)} total (caché hits: {cache_hits}/{len(candidates)})"
         )
         return all_candidates, fund_map
 
@@ -304,7 +330,7 @@ class FundamentalAnalyst(BaseAgent):
                     if not ticker or ticker in existing_tickers:
                         continue
                     try:
-                        fdata = self._fetch_finviz(ticker)
+                        fdata, _ = self._fetch_finviz(ticker)
                         price = self._pf(fdata.get("Price"))
                         if price <= 0:
                             continue
@@ -337,6 +363,78 @@ class FundamentalAnalyst(BaseAgent):
 
         if new_candidates:
             self._update_watchlist(new_candidates)
+
+        return new_candidates
+
+    def _run_gappers_screener(self, existing_tickers: set, fund_map: dict) -> list:
+        """Descubrimiento DIARIO de valores que se disparan hoy (gappers por noticia/evento).
+
+        Se ejecuta en cada sesión (sin caché semanal), no excluye sobrecompra y NO
+        modifica watchlist.json: los gappers son candidatos efímeros del día. Cubre el
+        hueco de detectar disparos en tickers que NO están en la watchlist.
+        """
+        if not GAPPERS_ENABLED:
+            return []
+
+        from finvizfinance.screener.overview import Overview
+
+        new_candidates = []
+        configs = [
+            (GAPPERS_LONG_FILTERS,  "gapper_long",  "long"),
+            (GAPPERS_SHORT_FILTERS, "gapper_short", "short"),
+        ]
+
+        for filters, label, direction in configs:
+            try:
+                overview = Overview()
+                overview.set_filter(filters_dict=filters)
+                df = overview.screener_view(limit=GAPPERS_LIMIT)
+                if df is None or df.empty:
+                    continue
+
+                for _, row in df.iterrows():
+                    ticker = str(row.get("Ticker", "")).strip()
+                    if not ticker or ticker in existing_tickers:
+                        continue
+                    try:
+                        fdata, _ = self._fetch_finviz(ticker)
+                        price = self._pf(fdata.get("Price"))
+                        if price <= 0:
+                            continue
+                        result = self._build_result(ticker, fdata, price)
+                        if result.blocked:
+                            self.logger.info(f"  Gapper BLOCKED {ticker}: {result.block_reason}")
+                            continue
+                        fund_map[ticker] = result
+                        existing_tickers.add(ticker)
+                        change_pct = self._pf(fdata.get("Change"))
+                        new_candidates.append(ScanCandidate(
+                            ticker=ticker,
+                            company_name=fdata.get("Company", ticker),
+                            sector=fdata.get("Sector", "Unknown"),
+                            price=price,
+                            volume_ratio=self._pf(fdata.get("Rel Volume")) or 2.0,
+                            price_change_pct=change_pct,
+                            market_cap=0.0,
+                            avg_volume_20d=500_000,
+                            high_52w=price,
+                            low_52w=price,
+                            scan_signals=[label],
+                            initial_score=result.fundamental_score * 0.5,
+                        ))
+                        self.logger.info(
+                            f"  Gapper {direction}: {ticker} ({change_pct:+.1f}% hoy, "
+                            f"fund {result.fundamental_score})"
+                        )
+                        time.sleep(0.35)
+                    except Exception:
+                        continue
+
+            except Exception as e:
+                self.logger.warning(f"Gappers screener {label} failed: {e}")
+
+        if new_candidates:
+            self.logger.info(f"  Gappers: {len(new_candidates)} candidatos nuevos del día")
 
         return new_candidates
 
