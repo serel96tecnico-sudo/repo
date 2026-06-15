@@ -6,7 +6,7 @@ from agents.base_agent import BaseAgent
 from config import (
     PORTFOLIO_VALUE, MAX_POSITION_PCT, MIN_RR_RATIO, ATR_STOP_MULTIPLIER, RISK_TOP_N,
     MIN_RISK_PER_TRADE, MAX_RISK_PER_TRADE, MODEL_PREMIUM, HALF_SIZE_FACTOR,
-    ENTRY_EXTENSION_ATR_MAX,
+    WEAK_ENTRY_ATR_MIN,
 )
 from models.schemas import TAResult, SentimentResult, RiskResult
 from utils.risk_policy import classify_tier, is_neutral_high_vol
@@ -141,41 +141,31 @@ class RiskManager(BaseAgent):
                 rr2 = round((entry - target_2) / risk_per_share, 2) if risk_per_share > 0 else 0
 
             else:
-                # LARGO: entrada cerca de soporte/pullback (paso 2 — "pullback por tier").
-                # Principio del operador: una buena entrada abre en verde o plano y deja
-                # un stop lógico ajustado. No perseguir extensión: comprar el spike justo
-                # donde revierte es lo que ponía los trades en rojo nada más abrir.
-                extension_atr = (price - ema9) / atr if atr else 0.0
-                near_support = support[0] if (support and support[0] < price) else None
-                pullback_anchor = near_support if (near_support and near_support >= ema21) else ema9
+                # LARGO: R5 — "exigir fuerza, no comprar debilidad" (calibrado con
+                # backtest_entry_quality.py). Lo que abre en rojo y salta por stop no
+                # es la extensión, es la DEBILIDAD: comprar con el precio flojo/por
+                # debajo de la EMA9. No entrar a mercado en ese caso; exigir que el
+                # precio recupere fuerza sobre la EMA9 (entrada-stop en el reclaim).
+                strength_atr = (price - ema9) / atr if atr else 0.0
 
                 if near_market:
                     # Sesión de tarde: ejecución a mercado antes del cierre (decisión previa)
                     entry = round(price, 2)
+                elif strength_atr < WEAK_ENTRY_ATR_MIN:
+                    # DÉBIL (precio a <0.5 ATR de la EMA9 o por debajo) — cuchillo cayendo.
+                    # Entrada-stop en el umbral de fuerza (EMA9 + 0.5·ATR): comprar solo
+                    # cuando recupere fuerza, no en la caída.
+                    reclaim = round(ema9 + WEAK_ENTRY_ATR_MIN * atr, 2)
+                    entry = reclaim
+                    entry_note = (
+                        f"R5: entrada débil ({strength_atr:.1f} ATR sobre EMA9) — no comprar "
+                        f"debilidad. Entrar solo si recupera fuerza sobre ~${reclaim:.2f}."
+                    )
                 elif support and support[0] >= price * 0.985:
-                    # Ya cerca de soporte (≤1.5%) — entrada límite sobre soporte (buena ubicación)
+                    # Con fuerza y soporte cerca (≤1.5%) — entrada límite sobre soporte
                     entry = round(support[0] * 1.002, 2)
-                elif extension_atr <= ENTRY_EXTENSION_ATR_MAX:
-                    # No extendido (a ≤1 ATR de la EMA9) — entrada a mercado aceptable
-                    entry = round(price, 2)
-                elif tier == "C":
-                    # Extendido + especulativo: NO perseguir. Entrada límite en el pullback.
-                    entry = round(min(price * 0.999, max(pullback_anchor, ema9)), 2)
-                    entry_note = (
-                        f"Pullback por tier (C): no perseguir. Entrada límite en el retroceso "
-                        f"a ~${entry:.2f} (EMA9/soporte); si no recorta, sin operación."
-                    )
-                elif tier == "B":
-                    # Extendido + momentum: breakout permitido pero con confirmación;
-                    # entrar en el retest (~1 ATR hacia la EMA9), no a mitad del impulso.
-                    confirm = round(price, 2)
-                    entry = round(max(ema9, price - atr), 2)
-                    entry_note = (
-                        f"Pullback por tier (B): confirmar cierre sostenido > ${confirm:.2f}; "
-                        f"entrar en el retest ~${entry:.2f}, no a mitad del impulso."
-                    )
                 else:
-                    # Tier A extendido (poco frecuente) — entrada a mercado
+                    # Con fuerza sobre la EMA9 — entrada a mercado (los breakouts funcionan)
                     entry = round(price, 2)
 
                 entry_zone_low = round(entry * 0.995, 2)

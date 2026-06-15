@@ -79,12 +79,15 @@ SUBTHEME_MAX_PCT = 0.40
 NEUTRAL_VIX_THRESHOLD = 20.0
 HALF_SIZE_FACTOR = 0.50
 
-# ── R5 — Calidad de entrada ("pullback por tier") — estrategia_riesgo §3 ─────
-# Un largo está "extendido" si cotiza > ENTRY_EXTENSION_ATR_MAX ATR sobre la EMA9.
-# Extendido => no entrar a mercado: Tier C entra en pullback a EMA9/soporte;
-# Tier B exige confirmación (cierre sobre el nivel) y entrada en el retest.
-# Aplicado en agents/risk_manager.py. Tests en tests/test_entry_quality.py.
-ENTRY_EXTENSION_ATR_MAX = 1.0
+# ── R5 — Calidad de entrada ("exigir fuerza, no comprar debilidad") ──────────
+# Calibrado con backtest_entry_quality.py (83 recs largas, 06/05-15/06):
+# lo que abre en rojo y salta por stop NO es la extensión sino la DEBILIDAD —
+# comprar con el precio flojo/por debajo de la EMA9 (cuchillo cayendo):
+#   <=0.5 ATR sobre EMA9 -> abre rojo 58%, stop 62%, ret+5d +1.0%
+#    >0.5 ATR sobre EMA9 -> abre rojo 27%, stop 36%, ret+5d +8.1%
+# Un largo es "débil" si cotiza < WEAK_ENTRY_ATR_MIN ATR sobre la EMA9: no entrar
+# a mercado, exigir recuperación de fuerza sobre la EMA9. Aplicado en risk_manager.
+WEAK_ENTRY_ATR_MIN = 0.5
 
 BROKER2_COMMISSION = 5.00  # $2.50 entrada + $2.50 salida = $5.00 ida+vuelta
 

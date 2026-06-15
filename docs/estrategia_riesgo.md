@@ -1,7 +1,7 @@
 # Especificación de Estrategia y Riesgo
 
 > **Estado:** v1 — 2026-06-13. Primera spec de estrategia definida explícitamente por el operador (no heredada de defaults del modelo).
-> **Implementación:** R1/R2/R3 cableadas en código el 2026-06-15 (`config.py` §4 + `utils/risk_policy.py`, aplicadas en `risk_manager.py` y `orchestrator._apply_exposure_caps`). R4 ya vivía en el orchestrator. R5 (calidad de entrada) en `risk_manager.py`. Tests en `tests/test_risk_policy.py` y `tests/test_entry_quality.py`.
+> **Implementación:** R1/R2/R3 cableadas en código el 2026-06-15 (`config.py` §4 + `utils/risk_policy.py`, aplicadas en `risk_manager.py` y `orchestrator._apply_exposure_caps`). R4 ya vivía en el orchestrator. R5 (calidad de entrada, calibrada con `backtest_entry_quality.py`) en `risk_manager.py`. Tests en `tests/test_risk_policy.py` y `tests/test_entry_quality.py`.
 > **Ámbito:** política de exposición, concentración y sizing. NO toca los indicadores técnicos del pipeline.
 
 ---
@@ -69,20 +69,21 @@ Cuando el régimen es **NEUTRAL/Sideways y VIX ≥ 20**, los **nuevos longs de T
 ### R4 — Cortos (sin cambios estructurales)
 Los cortos realizados funcionaron (6/7 ganadores, +207). Se mantienen las reglas vigentes: solo Broker 2, gated por régimen (no abrir en *Strong Uptrend*), entrada en pullback a EMA9. Esta spec no los modifica.
 
-### R5 — Calidad de entrada (no perseguir extensión)
-Decisión del operador: *"si una operación se vuelve negativa nada más abrirla es un fracaso de estrategia; podemos equivocarnos en el profit, pero abrir en verde da margen para cerrar si te has equivocado."* Una buena entrada abre en verde/plano y deja un stop lógico ajustado → opcionalidad (salir a breakeven si la tesis falla).
+### R5 — Calidad de entrada (exigir fuerza, no comprar debilidad)
+Decisión del operador: *"si una operación se vuelve negativa nada más abrirla es un fracaso de estrategia; abrir en verde da margen para cerrar si te has equivocado."* El principio es correcto; la palanca la fijó el backtest.
 
-Un largo está **extendido** si cotiza > **1 ATR sobre la EMA9** (`ENTRY_EXTENSION_ATR_MAX`). Si lo está, no se entra a mercado; la colocación es **"pullback por tier"**:
+**Calibración (backtest_entry_quality.py, 83 recs largas 06/05-15/06).** La primera hipótesis era "no perseguir extensión". El backtest la **falsó**: la extensión no causa el rojo inmediato — lo causa la **debilidad** (comprar con el precio flojo o por debajo de la EMA9).
 
-| Tier | Entrada cuando está extendido |
-|---|---|
-| **C** (especulativo) | **No perseguir.** Entrada límite en el pullback a EMA9/soporte. Si no recorta, sin operación. |
-| **B** (momentum) | Breakout permitido **con confirmación**: exige cierre sostenido sobre el nivel y entrada en el **retest** (~1 ATR hacia la EMA9), no a mitad del impulso. |
-| **A** (núcleo) | A mercado (poco frecuente que estén extendidos). |
+| Entrada (fuerza = (precio−EMA9)/ATR) | abre rojo | % stop | ret +5d |
+|---|---|---|---|
+| **Débil** (≤0.5 ATR) | 58 % | 62 % | +1.0 % |
+| **Con fuerza** (>0.5 ATR) | 27 % | 36 % | +8.1 % |
 
-> Matiz honesto: el P&L de los primeros minutos es parcialmente ruido (el edge es de swing a +3/+5 días, §7). El objetivo no es el tick inmediato sino la **ubicación de entrada**, que produce a la vez el sesgo a abrir en verde y un mejor R:R. Tensión con §1/§7: una regla de "solo pullback" estricta protegería del rojo inmediato pero cortaría runners de la cola derecha → por eso Tier B conserva el breakout (con confirmación) y solo Tier C exige pullback puro.
->
-> Sesión de tarde (`evening`): se mantiene la entrada a mercado (ejecución antes del cierre, decisión previa). R5 aplica a la sesión de mañana/estándar.
+Y por tier en el subconjunto extendido (>1 ATR), el **breakout extendido de Tier C fue el mejor** (abre rojo 21 %, stop 7 %, +10.7 %) → no hay que frenarlo. Correlación extensión→retorno +1d = **+0.36** (positiva).
+
+**Regla:** un largo es **débil** si cotiza < **0.5 ATR sobre la EMA9** (`WEAK_ENTRY_ATR_MIN`). En ese caso no se entra a mercado: la entrada es una **entrada-stop en el umbral de fuerza** (EMA9 + 0.5·ATR) — comprar solo cuando recupere fuerza, no en la caída. Con fuerza (≥0.5 ATR), entrada a mercado (los breakouts, incluidos los de Tier C, funcionan).
+
+> Cautelas (§7): muestra pequeña y **un solo régimen** (may-jun, tendencial). En NEUTRAL/bajista los breakouts fallan más y esto podría girar; revisar con más datos. Evitar comprar debilidad es seguro en cualquier régimen (no compras cuchillos cayendo); el "entrar a mercado con fuerza" está validado en tendencia. Sesión de tarde (`evening`): entrada a mercado sin cambios.
 
 ---
 
