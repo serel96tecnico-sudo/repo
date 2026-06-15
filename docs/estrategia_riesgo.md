@@ -1,7 +1,7 @@
 # Especificación de Estrategia y Riesgo
 
 > **Estado:** v1 — 2026-06-13. Primera spec de estrategia definida explícitamente por el operador (no heredada de defaults del modelo).
-> **Implementación:** R1/R2/R3 cableadas en código el 2026-06-15 (`config.py` §4 + `utils/risk_policy.py`, aplicadas en `risk_manager.py` y `orchestrator._apply_exposure_caps`). R4 ya vivía en el orchestrator. Tests en `tests/test_risk_policy.py`.
+> **Implementación:** R1/R2/R3 cableadas en código el 2026-06-15 (`config.py` §4 + `utils/risk_policy.py`, aplicadas en `risk_manager.py` y `orchestrator._apply_exposure_caps`). R4 ya vivía en el orchestrator. R5 (calidad de entrada) en `risk_manager.py`. Tests en `tests/test_risk_policy.py` y `tests/test_entry_quality.py`.
 > **Ámbito:** política de exposición, concentración y sizing. NO toca los indicadores técnicos del pipeline.
 
 ---
@@ -68,6 +68,21 @@ Cuando el régimen es **NEUTRAL/Sideways y VIX ≥ 20**, los **nuevos longs de T
 
 ### R4 — Cortos (sin cambios estructurales)
 Los cortos realizados funcionaron (6/7 ganadores, +207). Se mantienen las reglas vigentes: solo Broker 2, gated por régimen (no abrir en *Strong Uptrend*), entrada en pullback a EMA9. Esta spec no los modifica.
+
+### R5 — Calidad de entrada (no perseguir extensión)
+Decisión del operador: *"si una operación se vuelve negativa nada más abrirla es un fracaso de estrategia; podemos equivocarnos en el profit, pero abrir en verde da margen para cerrar si te has equivocado."* Una buena entrada abre en verde/plano y deja un stop lógico ajustado → opcionalidad (salir a breakeven si la tesis falla).
+
+Un largo está **extendido** si cotiza > **1 ATR sobre la EMA9** (`ENTRY_EXTENSION_ATR_MAX`). Si lo está, no se entra a mercado; la colocación es **"pullback por tier"**:
+
+| Tier | Entrada cuando está extendido |
+|---|---|
+| **C** (especulativo) | **No perseguir.** Entrada límite en el pullback a EMA9/soporte. Si no recorta, sin operación. |
+| **B** (momentum) | Breakout permitido **con confirmación**: exige cierre sostenido sobre el nivel y entrada en el **retest** (~1 ATR hacia la EMA9), no a mitad del impulso. |
+| **A** (núcleo) | A mercado (poco frecuente que estén extendidos). |
+
+> Matiz honesto: el P&L de los primeros minutos es parcialmente ruido (el edge es de swing a +3/+5 días, §7). El objetivo no es el tick inmediato sino la **ubicación de entrada**, que produce a la vez el sesgo a abrir en verde y un mejor R:R. Tensión con §1/§7: una regla de "solo pullback" estricta protegería del rojo inmediato pero cortaría runners de la cola derecha → por eso Tier B conserva el breakout (con confirmación) y solo Tier C exige pullback puro.
+>
+> Sesión de tarde (`evening`): se mantiene la entrada a mercado (ejecución antes del cierre, decisión previa). R5 aplica a la sesión de mañana/estándar.
 
 ---
 

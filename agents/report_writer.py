@@ -106,6 +106,7 @@ class ReportWriter(BaseAgent):
 Current Price: {current_px} | Pattern: {ta.pattern_detected if ta else 'N/A'} | Entry trigger: {ta.entry_trigger if ta else 'N/A'}
 Entry: ${risk.entry_price:.2f} | Stop: ${risk.stop_loss:.2f} | T1: ${risk.target_1:.2f} | T2: ${risk.target_2:.2f}
 R:R: {risk.rr_ratio_1:.1f}:1 | Hold: {risk.holding_days_estimate}
+Entry guidance: {risk.entry_note or '-'} | Sizing: {risk.sizing_note or 'normal'}
 Sentiment: {sent.overall_sentiment if sent else 'N/A'} | Catalyst: {sent.catalyst_description if sent and sent.catalyst_found else 'None'}
 TA summary: {ta.ta_summary if ta else 'N/A'}
 {fund_line}
@@ -211,6 +212,10 @@ Narrativa del setup 2 en una sola línea continua sin saltos de línea.
                     f"HOLD:        {risk.holding_days_estimate}",
                     f"POSITION:    {risk.position_size_pct}% of portfolio ({risk.position_size_shares} shares | max loss ${risk.max_loss_dollars:.2f})",
                 ]
+                if risk.entry_note:
+                    lines.append(f"ENTRADA:     {risk.entry_note}")
+                if risk.sizing_note:
+                    lines.append(f"SIZING:      {risk.sizing_note}")
 
             if ta:
                 ind = ta.indicators

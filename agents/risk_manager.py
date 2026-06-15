@@ -6,6 +6,7 @@ from agents.base_agent import BaseAgent
 from config import (
     PORTFOLIO_VALUE, MAX_POSITION_PCT, MIN_RR_RATIO, ATR_STOP_MULTIPLIER, RISK_TOP_N,
     MIN_RISK_PER_TRADE, MAX_RISK_PER_TRADE, MODEL_PREMIUM, HALF_SIZE_FACTOR,
+    ENTRY_EXTENSION_ATR_MAX,
 )
 from models.schemas import TAResult, SentimentResult, RiskResult
 from utils.risk_policy import classify_tier, is_neutral_high_vol
@@ -97,6 +98,7 @@ class RiskManager(BaseAgent):
                 return None
 
             direction = getattr(ta, "direction", "long")
+            entry_note = ""
 
             # Pipeline tarde: entrada a precio de mercado para ejecución antes del cierre
             near_market = (session == "evening")
@@ -139,16 +141,41 @@ class RiskManager(BaseAgent):
                 rr2 = round((entry - target_2) / risk_per_share, 2) if risk_per_share > 0 else 0
 
             else:
-                # LARGO: entrada cerca de soporte, stop por debajo, targets en resistencias
+                # LARGO: entrada cerca de soporte/pullback (paso 2 — "pullback por tier").
+                # Principio del operador: una buena entrada abre en verde o plano y deja
+                # un stop lógico ajustado. No perseguir extensión: comprar el spike justo
+                # donde revierte es lo que ponía los trades en rojo nada más abrir.
+                extension_atr = (price - ema9) / atr if atr else 0.0
+                near_support = support[0] if (support and support[0] < price) else None
+                pullback_anchor = near_support if (near_support and near_support >= ema21) else ema9
+
                 if near_market:
+                    # Sesión de tarde: ejecución a mercado antes del cierre (decisión previa)
                     entry = round(price, 2)
                 elif support and support[0] >= price * 0.985:
-                    # Soporte cerca (≤1.5% por debajo) — entrada límite sobre soporte
+                    # Ya cerca de soporte (≤1.5%) — entrada límite sobre soporte (buena ubicación)
                     entry = round(support[0] * 1.002, 2)
-                elif price > ema9 * 0.99:
-                    # Precio sobre EMA9 — entrada a mercado
+                elif extension_atr <= ENTRY_EXTENSION_ATR_MAX:
+                    # No extendido (a ≤1 ATR de la EMA9) — entrada a mercado aceptable
                     entry = round(price, 2)
+                elif tier == "C":
+                    # Extendido + especulativo: NO perseguir. Entrada límite en el pullback.
+                    entry = round(min(price * 0.999, max(pullback_anchor, ema9)), 2)
+                    entry_note = (
+                        f"Pullback por tier (C): no perseguir. Entrada límite en el retroceso "
+                        f"a ~${entry:.2f} (EMA9/soporte); si no recorta, sin operación."
+                    )
+                elif tier == "B":
+                    # Extendido + momentum: breakout permitido pero con confirmación;
+                    # entrar en el retest (~1 ATR hacia la EMA9), no a mitad del impulso.
+                    confirm = round(price, 2)
+                    entry = round(max(ema9, price - atr), 2)
+                    entry_note = (
+                        f"Pullback por tier (B): confirmar cierre sostenido > ${confirm:.2f}; "
+                        f"entrar en el retest ~${entry:.2f}, no a mitad del impulso."
+                    )
                 else:
+                    # Tier A extendido (poco frecuente) — entrada a mercado
                     entry = round(price, 2)
 
                 entry_zone_low = round(entry * 0.995, 2)
@@ -211,6 +238,7 @@ class RiskManager(BaseAgent):
                 tier=tier,
                 subtheme=subtheme or "",
                 sizing_note=sizing_note,
+                entry_note=entry_note,
             )
 
         except Exception as e:

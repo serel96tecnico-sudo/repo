@@ -79,6 +79,13 @@ SUBTHEME_MAX_PCT = 0.40
 NEUTRAL_VIX_THRESHOLD = 20.0
 HALF_SIZE_FACTOR = 0.50
 
+# ── R5 — Calidad de entrada ("pullback por tier") — estrategia_riesgo §3 ─────
+# Un largo está "extendido" si cotiza > ENTRY_EXTENSION_ATR_MAX ATR sobre la EMA9.
+# Extendido => no entrar a mercado: Tier C entra en pullback a EMA9/soporte;
+# Tier B exige confirmación (cierre sobre el nivel) y entrada en el retest.
+# Aplicado en agents/risk_manager.py. Tests en tests/test_entry_quality.py.
+ENTRY_EXTENSION_ATR_MAX = 1.0
+
 BROKER2_COMMISSION = 5.00  # $2.50 entrada + $2.50 salida = $5.00 ida+vuelta
 
 RUN_TIME = os.environ.get("RUN_TIME", "15:00")

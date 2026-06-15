@@ -172,6 +172,7 @@ class RiskResult:
     tier: str = ""           # A/B/C (docs/estrategia_riesgo.md §2)
     subtheme: str = ""       # sub-tema de Tier C (R2), vacío si no aplica
     sizing_note: str = ""    # p.ej. "R3 half-size (Tier C, NEUTRAL+VIX>=20)"
+    entry_note: str = ""     # guía de entrada (paso 2): pullback / confirmación+retest
 
     def to_dict(self) -> dict:
         return asdict(self)
