@@ -62,6 +62,23 @@ MAX_RISK_PER_TRADE = float(os.environ.get("MAX_RISK_PER_TRADE", "600"))
 
 SCORE_WEIGHTS = {"scan": 0.15, "fundamental": 0.15, "ta": 0.35, "sentiment": 0.15, "risk": 0.20}
 
+# ── Política de riesgo/exposición — docs/estrategia_riesgo.md §4 ──────────────
+# Wired 2026-06-15. Implementación de las reglas R1/R2/R3 (R4 ya vivía en el
+# orchestrator). Lógica y clasificación de tiers en utils/risk_policy.py.
+
+# R1 — Cap de exposición a alta beta (Tier B+C) por régimen, sobre PORTFOLIO_VALUE
+HIGH_BETA_CAP_STRONG_UP = 0.80   # Strong Uptrend / VIX < 18
+HIGH_BETA_CAP_UPTREND   = 0.70   # Uptrend / VIX 18-22
+HIGH_BETA_CAP_NEUTRAL   = 0.60   # NEUTRAL/Sideways / VIX >= 20
+HIGH_BETA_CAP_RISKOFF   = 0.40   # Downtrend/risk-off / VIX > 25
+
+# R2 — Concentración máx. de un sub-tema de Tier C dentro del presupuesto de alta beta
+SUBTHEME_MAX_PCT = 0.40
+
+# R3 — Half-size de nuevos longs de Tier C cuando NEUTRAL/Sideways y VIX >= umbral
+NEUTRAL_VIX_THRESHOLD = 20.0
+HALF_SIZE_FACTOR = 0.50
+
 BROKER2_COMMISSION = 5.00  # $2.50 entrada + $2.50 salida = $5.00 ida+vuelta
 
 RUN_TIME = os.environ.get("RUN_TIME", "15:00")

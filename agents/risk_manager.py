@@ -5,9 +5,10 @@ import anthropic
 from agents.base_agent import BaseAgent
 from config import (
     PORTFOLIO_VALUE, MAX_POSITION_PCT, MIN_RR_RATIO, ATR_STOP_MULTIPLIER, RISK_TOP_N,
-    MIN_RISK_PER_TRADE, MAX_RISK_PER_TRADE, MODEL_PREMIUM,
+    MIN_RISK_PER_TRADE, MAX_RISK_PER_TRADE, MODEL_PREMIUM, HALF_SIZE_FACTOR,
 )
 from models.schemas import TAResult, SentimentResult, RiskResult
+from utils.risk_policy import classify_tier, is_neutral_high_vol
 
 
 RISK_SYSTEM = """You are a professional risk manager for a swing trading desk.
@@ -34,10 +35,17 @@ class RiskManager(BaseAgent):
     def __init__(self, client: anthropic.Anthropic):
         super().__init__(client)
 
-    def run(self, ta_results: list, sentiment_map: dict, portfolio: dict = None, session: str = "morning") -> list:
+    def run(self, ta_results: list, sentiment_map: dict, portfolio: dict = None,
+            session: str = "morning", market_conditions=None, tier_map: dict = None) -> list:
         today = datetime.now().strftime("%Y-%m-%d")
         results = []
         top = ta_results[:RISK_TOP_N]
+        tier_map = tier_map or {}
+        half_size_regime = is_neutral_high_vol(market_conditions)
+        if half_size_regime:
+            self.logger.info(
+                "  R3 activa: NEUTRAL + VIX>=20 → nuevos longs Tier C a media posición"
+            )
         self.logger.info(f"Running risk assessment on {len(top)} candidates...")
 
         # Tickers ya en cartera — evitar doblar posición
@@ -59,7 +67,11 @@ class RiskManager(BaseAgent):
                 continue
 
             self.logger.info(f"  Risk [{i+1}/{len(top)}]: {ta.ticker}")
-            result = self._calculate_risk_params(ta, sent, session=session)
+            tier, subtheme = tier_map.get(ta.ticker.upper()) or classify_tier(ta.ticker)
+            result = self._calculate_risk_params(
+                ta, sent, session=session,
+                tier=tier, subtheme=subtheme, half_size_regime=half_size_regime,
+            )
 
             if result and result.rr_ratio_1 >= MIN_RR_RATIO:
                 results.append(result)
@@ -70,7 +82,8 @@ class RiskManager(BaseAgent):
         results.sort(key=lambda r: r.risk_score, reverse=True)
         return results
 
-    def _calculate_risk_params(self, ta: TAResult, sent: SentimentResult = None, session: str = "morning") -> RiskResult:
+    def _calculate_risk_params(self, ta: TAResult, sent: SentimentResult = None, session: str = "morning",
+                               tier: str = "", subtheme: str = "", half_size_regime: bool = False) -> RiskResult:
         try:
             price = ta.indicators.get("price", 0) or getattr(ta, "last_price", 0)
             atr = ta.indicators.get("atr_14") or (price * 0.02)
@@ -162,6 +175,14 @@ class RiskManager(BaseAgent):
 
             # Número de acciones: basado en riesgo fijo, con tope de capital
             target_risk = (MIN_RISK_PER_TRADE + MAX_RISK_PER_TRADE) / 2  # $550
+            # R3 — half-size de nuevos longs Tier C en NEUTRAL + VIX>=20
+            sizing_note = ""
+            if half_size_regime and direction != "short" and tier == "C":
+                target_risk *= HALF_SIZE_FACTOR
+                sizing_note = "R3 half-size (Tier C, NEUTRAL+VIX>=20)"
+                self.logger.info(
+                    f"  {ta.ticker}: R3 half-size aplicado (Tier C / {subtheme or 'otros'})"
+                )
             shares_by_risk = max(1, int(target_risk / risk_per_share))
             shares_by_capital = max(1, int(PORTFOLIO_VALUE * MAX_POSITION_PCT / entry))
             position_size_shares = min(shares_by_risk, shares_by_capital)
@@ -187,6 +208,9 @@ class RiskManager(BaseAgent):
                 max_loss_dollars=max_loss,
                 holding_days_estimate="1-3 trading days" if near_market else "5-10 trading days",
                 risk_score=risk_score,
+                tier=tier,
+                subtheme=subtheme or "",
+                sizing_note=sizing_note,
             )
 
         except Exception as e:

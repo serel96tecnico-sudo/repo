@@ -169,6 +169,9 @@ class RiskResult:
     max_loss_dollars: float
     holding_days_estimate: str = "5-10 trading days"
     risk_score: float = 5.0
+    tier: str = ""           # A/B/C (docs/estrategia_riesgo.md §2)
+    subtheme: str = ""       # sub-tema de Tier C (R2), vacío si no aplica
+    sizing_note: str = ""    # p.ej. "R3 half-size (Tier C, NEUTRAL+VIX>=20)"
 
     def to_dict(self) -> dict:
         return asdict(self)

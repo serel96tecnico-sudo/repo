@@ -9,6 +9,10 @@ from config import (
     ANTHROPIC_API_KEY, CONTEXT_DIR, OUTPUT_DIR, LOGS_DIR,
     SCORE_WEIGHTS, FINAL_REPORT_N, US_MARKET_HOLIDAYS_2026,
     TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
+    PORTFOLIO_VALUE, SUBTHEME_MAX_PCT,
+)
+from utils.risk_policy import (
+    build_tier_map, classify_tier, high_beta_cap, is_high_beta, is_explicitly_classified,
 )
 from agents.market_scanner import MarketScanner
 from agents.fundamental_analyst import FundamentalAnalyst
@@ -117,14 +121,23 @@ class TradingOrchestrator:
 
         sentiment_map = {s.ticker: s for s in sentiment_results}
 
+        market_conditions = scan_result.market_conditions if scan_result else None
+        tier_map = build_tier_map(scan_result.candidates if scan_result else [])
+
         try:
-            risk_results = self.risk_agent.run(ta_results, sentiment_map, portfolio, session=self.session)
+            risk_results = self.risk_agent.run(
+                ta_results, sentiment_map, portfolio, session=self.session,
+                market_conditions=market_conditions, tier_map=tier_map,
+            )
             self.logger.info(f"Risk complete: {len(risk_results)} results")
         except Exception as e:
             self.logger.error(f"Risk phase failed: {e}")
 
         ta_map = {t.ticker: t for t in ta_results}
         final_candidates = self._merge_and_rank(risk_results, ta_map, sentiment_map, scan_result, fund_map)
+        final_candidates = self._apply_exposure_caps(
+            final_candidates, tier_map, portfolio, market_conditions
+        )
 
         if final_candidates:
             tickers = [fc.ticker for fc in final_candidates]
@@ -310,6 +323,80 @@ class TradingOrchestrator:
             fc.rank = i + 1
 
         return final
+
+    def _apply_exposure_caps(self, final, tier_map, portfolio, market_conditions) -> list:
+        """R1 (cap de alta beta por régimen) + R2 (concentración por sub-tema).
+
+        Recorre los longs aceptados (BUY/STRONG BUY) por ranking y degrada a WATCH
+        los que romperían el cap, contando la cartera existente como exposición ya
+        consumida. Los cortos no se tocan (R4). Greedy: el mejor score se queda con
+        el presupuesto.
+        """
+        if not final or market_conditions is None:
+            return final
+
+        cap = high_beta_cap(market_conditions)                  # R1
+        hb_budget = cap * PORTFOLIO_VALUE                        # $ máx en alta beta
+        subtheme_budget = SUBTHEME_MAX_PCT * hb_budget          # R2 base estable
+
+        # Exposición ya consumida por la cartera existente
+        high_beta_val = 0.0
+        subtheme_val = {}
+        if portfolio:
+            # Acciones cuentan siempre; ETFs solo si están clasificados a propósito
+            # (un ETF de materias primas/amplio es diversificador, no riesgo de nombre).
+            holdings = [(p, True) for p in portfolio.get("acciones", [])] + \
+                       [(p, False) for p in portfolio.get("etfs", [])]
+            for p, is_stock in holdings:
+                tkr = p.get("ticker", "").upper()
+                if not is_stock and not is_explicitly_classified(tkr):
+                    continue
+                qty = p.get("cantidad", 0) or 0
+                px = p.get("precio_actual_usd") or p.get("bep_usd") or 0
+                val = qty * px
+                if val <= 0:
+                    continue
+                tier, sub = tier_map.get(tkr) or classify_tier(tkr)
+                if is_high_beta(tier):
+                    high_beta_val += val
+                    if tier == "C":
+                        subtheme_val[sub] = subtheme_val.get(sub, 0.0) + val
+
+        self.logger.info(
+            f"R1/R2: cap alta beta {cap:.0%} (${hb_budget:,.0f}), "
+            f"sub-tema máx ${subtheme_budget:,.0f}. "
+            f"Cartera ya consume ${high_beta_val:,.0f} alta beta."
+        )
+
+        for fc in final:  # ya ordenado por score
+            if fc.recommendation not in ("BUY", "STRONG BUY"):
+                continue  # WATCH y cortos (SELL/STRONG SELL) intactos
+            risk = fc.risk_data
+            if not risk:
+                continue
+            tier, sub = tier_map.get(fc.ticker.upper()) or classify_tier(fc.ticker)
+            if not is_high_beta(tier):
+                continue  # Tier A no consume presupuesto de alta beta
+
+            val = (risk.position_size_shares or 0) * (risk.entry_price or 0)
+
+            if high_beta_val + val > hb_budget:
+                self._demote(fc, f"R1 cap alta beta {cap:.0%} superado")
+                continue
+            if tier == "C":
+                if subtheme_val.get(sub, 0.0) + val > subtheme_budget:
+                    self._demote(fc, f"R2 concentración sub-tema '{sub}' >40%")
+                    continue
+                subtheme_val[sub] = subtheme_val.get(sub, 0.0) + val
+            high_beta_val += val
+
+        return final
+
+    def _demote(self, fc, reason: str):
+        fc.recommendation = "WATCH"
+        note = f"[{reason}]"
+        fc.summary = (fc.summary + " " + note).strip() if fc.summary else note
+        self.logger.info(f"  {fc.ticker}: degradado a WATCH — {reason}")
 
     def _should_run_today(self) -> bool:
         today = datetime.now()

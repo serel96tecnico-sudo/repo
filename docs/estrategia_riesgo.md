@@ -1,6 +1,7 @@
 # Especificación de Estrategia y Riesgo
 
 > **Estado:** v1 — 2026-06-13. Primera spec de estrategia definida explícitamente por el operador (no heredada de defaults del modelo).
+> **Implementación:** R1/R2/R3 cableadas en código el 2026-06-15 (`config.py` §4 + `utils/risk_policy.py`, aplicadas en `risk_manager.py` y `orchestrator._apply_exposure_caps`). R4 ya vivía en el orchestrator. Tests en `tests/test_risk_policy.py`.
 > **Ámbito:** política de exposición, concentración y sizing. NO toca los indicadores técnicos del pipeline.
 
 ---
@@ -70,7 +71,7 @@ Los cortos realizados funcionaron (6/7 ganadores, +207). Se mantienen las reglas
 
 ---
 
-## 4. Parámetros (para futura traducción a `config.py`)
+## 4. Parámetros (implementados en `config.py` desde 2026-06-15)
 
 ```
 # Caps de exposición alta beta por régimen
@@ -87,7 +88,14 @@ NEUTRAL_VIX_THRESHOLD     = 20
 HALF_SIZE_FACTOR          = 0.50
 ```
 
-> Estos valores viven aquí como **decisión**. La implementación en el pipeline (orchestrator/risk_manager) es un paso posterior y opcional.
+> Estos valores viven aquí como **decisión** y están replicados en `config.py`. La clasificación de tiers (§2) y sub-temas vive en `utils/risk_policy.py` como **semilla editable**: los nombres no listados se clasifican por capitalización (>=100B→A, >=15B→B, resto→C/otros). Conviene revisar la taxonomía periódicamente (§5).
+>
+> **Notas de implementación:**
+> - **R1** usa `PORTFOLIO_VALUE` como denominador del cap (no el capital invertido), para evitar el caso degenerado de que la primera posición sea siempre el 100%.
+> - **R2** acota cada sub-tema a `SUBTHEME_MAX_PCT × (cap × PORTFOLIO_VALUE)`, el 40% del *presupuesto* de alta beta del régimen, no del bucket ya lleno.
+> - **R3** reduce el riesgo objetivo (no el tope de capital): si ya estabas limitado por capital, el half-size puede no cambiar el nº de acciones.
+> - Los ETF de cartera solo cuentan como alta beta si están clasificados explícitamente (un ETF de materias primas/amplio es diversificador).
+> - Se añadieron dos sub-temas a los de §2 para agrupar clústeres reales del watchlist: `cripto_fin` (CRCL, SBET…) y `health_spec` (HIMS, OSCR, LMND…).
 
 ---
 

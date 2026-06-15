@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Strategy & risk policy (READ FIRST for any change to scoring/sizing/exposure)
 
-The trading strategy and risk policy are defined explicitly in **[docs/estrategia_riesgo.md](docs/estrategia_riesgo.md)** — the operator's decisions, not model defaults. Before changing scoring, position sizing, exposure, or concentration, read it. Core rules: momentum/high-beta tilt with a **dynamic high-beta exposure cap by regime** (R1), **per-sub-theme concentration limit** to avoid correlated blow-ups like the 2026-06-05 cluster (R2), and **half-size new speculative longs when VIX≥20 + NEUTRAL regime** (R3). Parameters live in §4 of that doc (not yet wired into config.py). Do not silently override these.
+The trading strategy and risk policy are defined explicitly in **[docs/estrategia_riesgo.md](docs/estrategia_riesgo.md)** — the operator's decisions, not model defaults. Before changing scoring, position sizing, exposure, or concentration, read it. Core rules: momentum/high-beta tilt with a **dynamic high-beta exposure cap by regime** (R1), **per-sub-theme concentration limit** to avoid correlated blow-ups like the 2026-06-05 cluster (R2), and **half-size new speculative longs when VIX≥20 + NEUTRAL regime** (R3). R1/R2/R3 are **wired in** (2026-06-15): parameters in `config.py` §4, tier/sub-theme taxonomy + rule logic in `utils/risk_policy.py`, applied in `risk_manager.py` (R3 sizing) and `orchestrator._apply_exposure_caps` (R1/R2 demotion to WATCH). R4 (shorts) lives in `orchestrator._merge_and_rank`. The tier taxonomy is an editable seed — review it periodically. Do not silently override these.
 
 ## What this project does
 
