@@ -428,12 +428,9 @@ class MarketDataFetcher:
                 qqq_ema9 = float(qqq.ewm(span=9, adjust=False).mean().iloc[-1])
                 qqq_ema21 = float(qqq.ewm(span=21, adjust=False).mean().iloc[-1])
 
-            # VIX — yfinance only (^VIX not available on Alpaca)
-            try:
-                vix_data = yf.download("^VIX", period="5d", auto_adjust=True, progress=False)
-                vix_level = float(vix_data["Close"].dropna().iloc[-1])
-            except Exception:
-                pass
+            # VIX — yfinance/Stooq (^VIX not available on Alpaca). Robust fetch with
+            # last-good cache; never silently defaults to a magic 20.0 that flips regime.
+            vix_level = self._fetch_vix()
 
             # Crypto via Alpaca CryptoHistoricalDataClient (no API key needed)
             btc_price = btc_chg = eth_price = eth_chg = 0.0
@@ -510,13 +507,102 @@ class MarketDataFetcher:
 
         except Exception as e:
             logger.error(f"Failed to get market overview: {e}")
+            cached_vix, cached_age = self._load_vix_cache()
+            if cached_vix is not None:
+                logger.warning(
+                    f"Market overview failed — using cached VIX {cached_vix} "
+                    f"({cached_age}d old) instead of magic default"
+                )
+                vix_level = cached_vix
+            else:
+                logger.warning("Market overview failed and no VIX cache — defaulting VIX to 20.0")
+                vix_level = 20.0
+            if vix_level < 15:
+                regime = "BULLISH — Low fear, risk-on"
+            elif vix_level < 20:
+                regime = "BULLISH — Normal volatility, favor longs"
+            elif vix_level < 30:
+                regime = "NEUTRAL — Elevated volatility, be selective"
+            else:
+                regime = "BEARISH — High fear, reduce exposure"
             return MarketConditions(
                 date=today,
                 spy_trend="Unknown",
                 qqq_trend="Unknown",
-                vix_level=20.0,
-                regime="NEUTRAL — Data unavailable",
+                vix_level=round(vix_level, 2),
+                regime=regime,
             )
+
+    def _fetch_vix(self) -> float:
+        """Fetch ^VIX robustly. Tries yfinance (2x) then Stooq; validates the value
+        and caches the last good one. Falls back to the cached value (logged) and only
+        to a hard 20.0 as last resort — so a flaky fetch never silently flips the regime."""
+        def _valid(v) -> bool:
+            try:
+                return v is not None and 5.0 < float(v) < 200.0
+            except Exception:
+                return False
+
+        # 1) yfinance, two attempts. NB: yfinance now returns MultiIndex columns even for a
+        # single ticker, so vix_data["Close"] is a DataFrame — must squeeze to a Series first.
+        for attempt in range(2):
+            try:
+                vix_data = yf.download("^VIX", period="5d", auto_adjust=True, progress=False)
+                close = vix_data["Close"]
+                if isinstance(close, pd.DataFrame):
+                    close = close.iloc[:, 0]
+                v = float(close.dropna().iloc[-1])
+                if _valid(v):
+                    self._save_vix_cache(v)
+                    logger.info(f"VIX={round(v, 2)} (yfinance)")
+                    return round(v, 2)
+            except Exception as e:
+                logger.warning(f"VIX yfinance attempt {attempt + 1}/2 failed: {e}")
+
+        # 2) yfinance Ticker.history fallback — different internal code path than
+        # yf.download(), so it can succeed when download() is flaky/rate-limited.
+        try:
+            hist = yf.Ticker("^VIX").history(period="5d", auto_adjust=True)
+            v = float(hist["Close"].dropna().iloc[-1])
+            if _valid(v):
+                self._save_vix_cache(v)
+                logger.info(f"VIX={round(v, 2)} (yfinance Ticker.history)")
+                return round(v, 2)
+        except Exception as e:
+            logger.warning(f"VIX Ticker.history fallback failed: {e}")
+
+        # 3) last-good cache
+        cached, age = self._load_vix_cache()
+        if cached is not None:
+            logger.warning(f"VIX fetch failed — using cached {cached} ({age}d old)")
+            return cached
+
+        # 4) last resort
+        logger.warning("VIX fetch failed and no cache available — defaulting to 20.0")
+        return 20.0
+
+    def _load_vix_cache(self) -> tuple:
+        import json
+        path = self.context_dir / "vix_last.json"
+        if not path.exists():
+            return None, None
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            updated = datetime.fromisoformat(data["updated"])
+            age = (datetime.now() - updated).days
+            return float(data["vix"]), age
+        except Exception:
+            return None, None
+
+    def _save_vix_cache(self, vix: float) -> None:
+        import json, os
+        path = self.context_dir / "vix_last.json"
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(
+            json.dumps({"vix": round(float(vix), 2), "updated": datetime.now().isoformat()}, indent=2),
+            encoding="utf-8",
+        )
+        os.replace(tmp, path)
 
     def _load_cache(self, key: str) -> tuple:
         import json
