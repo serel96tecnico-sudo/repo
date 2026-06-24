@@ -247,11 +247,15 @@ class TradingOrchestrator:
                 mc = scan_result.market_conditions
                 spy = mc.spy_trend or ""
                 qqq = mc.qqq_trend or ""
-                regime = mc.regime or ""
 
-                bullish = (spy in ("Strong Uptrend", "Uptrend") or regime.startswith("BULLISH"))
+                # Dirección del mercado = TENDENCIA DEL PRECIO (spy_trend), no la
+                # etiqueta `regime` (que es de volatilidad/VIX). Antes se hacía OR con
+                # regime.startswith("BULLISH") y un VIX bajo en pleno Downtrend bloqueaba
+                # los cortos tratando el mercado como alcista. La volatilidad ya la
+                # gestionan R1/R3 por separado.
+                bullish = spy in ("Strong Uptrend", "Uptrend")
                 strong_bullish = spy == "Strong Uptrend"
-                bearish = (spy in ("Strong Downtrend", "Downtrend") or regime.startswith("BEARISH"))
+                bearish = spy in ("Strong Downtrend", "Downtrend")
                 strong_bearish = spy == "Strong Downtrend"
 
                 if strong_bullish:

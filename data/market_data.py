@@ -35,6 +35,24 @@ from config import ALPACA_API_KEY, ALPACA_API_SECRET
 
 logger = get_logger(__name__)
 
+
+def classify_regime(spy_trend: str, vix_level: float) -> str:
+    """Régimen COHERENTE = dirección del precio (spy_trend) matizada por el miedo (VIX).
+
+    Antes el régimen se derivaba SOLO del VIX, así que podía decir 'BULLISH' con el
+    SPY en Downtrend (VIX bajo + precio cayendo) — y el filtro de cortos lo leía como
+    'mercado alcista' y bloqueaba shorts justo en las caídas. Ahora la dirección manda:
+    nunca se etiqueta BULLISH si el precio no está en tendencia alcista.
+    """
+    if vix_level >= 30 or "Downtrend" in spy_trend:
+        return "BEARISH — tendencia bajista o alta tensión, reducir exposición"
+    if vix_level >= 20 or spy_trend in ("Sideways", "Unknown", ""):
+        return "NEUTRAL — volatilidad elevada o sin tendencia, ser selectivo"
+    if spy_trend in ("Uptrend", "Strong Uptrend"):
+        return "BULLISH — tendencia alcista con volatilidad contenida, favor longs"
+    return "NEUTRAL — sin señal clara, ser selectivo"
+
+
 FALLBACK_SP500 = [
     "AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "GOOG", "TSLA", "BRK-B",
     "AVGO", "JPM", "LLY", "V", "UNH", "XOM", "MA", "JNJ", "PG", "COST", "HD",
@@ -482,14 +500,7 @@ class MarketDataFetcher:
             spy_trend = trend(spy_price, spy_ema9, spy_ema21, spy_ema50)
             qqq_trend = trend(qqq_price, qqq_ema9, qqq_ema21, qqq_price)
 
-            if vix_level < 15:
-                regime = "BULLISH — Low fear, risk-on"
-            elif vix_level < 20:
-                regime = "BULLISH — Normal volatility, favor longs"
-            elif vix_level < 30:
-                regime = "NEUTRAL — Elevated volatility, be selective"
-            else:
-                regime = "BEARISH — High fear, reduce exposure"
+            regime = classify_regime(spy_trend, vix_level)
 
             return MarketConditions(
                 date=today,
@@ -517,14 +528,9 @@ class MarketDataFetcher:
             else:
                 logger.warning("Market overview failed and no VIX cache — defaulting VIX to 20.0")
                 vix_level = 20.0
-            if vix_level < 15:
-                regime = "BULLISH — Low fear, risk-on"
-            elif vix_level < 20:
-                regime = "BULLISH — Normal volatility, favor longs"
-            elif vix_level < 30:
-                regime = "NEUTRAL — Elevated volatility, be selective"
-            else:
-                regime = "BEARISH — High fear, reduce exposure"
+            # Sin datos de tendencia (fetch caído) → el clasificador cae a NEUTRAL salvo
+            # que el VIX sea de pánico (>=30 → BEARISH). No se inventa una dirección.
+            regime = classify_regime("Unknown", vix_level)
             return MarketConditions(
                 date=today,
                 spy_trend="Unknown",
