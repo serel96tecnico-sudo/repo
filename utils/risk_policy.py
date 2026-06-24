@@ -8,7 +8,10 @@ esa clasificación se aplican:
   R1  high_beta_cap()        — cap de exposición a alta beta (B+C) por régimen.
   R2  (en el orchestrator)   — un sub-tema de Tier C no supera SUBTHEME_MAX_PCT
                                del presupuesto de alta beta.
-  R3  is_neutral_high_vol()  — half-size de nuevos longs Tier C en NEUTRAL+VIX↑.
+  R3  risk_pct_for_regime()  — riesgo por trade dinámico, inverso al VIX (1-3%).
+                               Reemplaza al antiguo half-size fijo.
+  R6  open_position_risk()   — riesgo abierto agregado de la cartera (tope en el
+                               orchestrator). Freno al clúster correlacionado.
 
 La taxonomía es una SEMILLA editable por el operador. Los nombres no listados se
 clasifican por capitalización (fallback): >=100B → A, >=15B → B, resto → C/otros.
@@ -18,7 +21,9 @@ Conviene revisarla periódicamente (§5 falsabilidad).
 from config import (
     HIGH_BETA_CAP_STRONG_UP, HIGH_BETA_CAP_UPTREND,
     HIGH_BETA_CAP_NEUTRAL, HIGH_BETA_CAP_RISKOFF,
-    NEUTRAL_VIX_THRESHOLD,
+    RISK_PCT_STRONG_UP, RISK_PCT_UPTREND,
+    RISK_PCT_NEUTRAL, RISK_PCT_RISKOFF,
+    DEFAULT_STOP_PCT, MIN_INVEST_PER_TRADE, MAX_INVEST_PER_TRADE,
 )
 
 # ── Tier A — núcleo, beta baja/media (large-caps establecidos) ────────────────
@@ -118,20 +123,76 @@ def high_beta_cap(market_conditions) -> float:
     return HIGH_BETA_CAP_STRONG_UP
 
 
-def is_neutral_high_vol(market_conditions) -> bool:
-    """R3 — condición de half-size: régimen NEUTRAL/Sideways y VIX >= umbral."""
+def risk_pct_for_regime(market_conditions) -> float:
+    """R3 (redefinida) — riesgo por trade dinámico, INVERSO al VIX. Más riesgo en
+    calma (momentum funciona), menos en estrés (los breakouts fallan). Usa la misma
+    lectura defensiva que high_beta_cap (toma lo más prudente entre tendencia y VIX)."""
     if market_conditions is None:
-        return False
+        return RISK_PCT_UPTREND
     vix = getattr(market_conditions, "vix_level", None) or 0.0
     spy = getattr(market_conditions, "spy_trend", "") or ""
-    qqq = getattr(market_conditions, "qqq_trend", "") or ""
     regime = (getattr(market_conditions, "regime", "") or "").upper()
-    neutralish = (
-        regime.startswith("NEUTRAL")
-        or "Sideways" in spy
-        or "Sideways" in qqq
-    )
-    return neutralish and vix >= NEUTRAL_VIX_THRESHOLD
+
+    if vix > 25 or "Downtrend" in spy or regime.startswith("BEAR"):
+        return RISK_PCT_RISKOFF
+    if vix >= 20 or "Sideways" in spy or regime.startswith("NEUTRAL"):
+        return RISK_PCT_NEUTRAL
+    if vix >= 18 or spy == "Uptrend":
+        return RISK_PCT_UPTREND
+    return RISK_PCT_STRONG_UP
+
+
+def size_position(target_risk: float, risk_per_share: float, entry: float,
+                  max_position_value: float) -> int:
+    """Nº de acciones: el motor de riesgo (R3) propone y la banda de inversión
+    bruta [MIN_INVEST_PER_TRADE, MAX_INVEST_PER_TRADE] acota.
+
+    Orden: (1) base por riesgo = target_risk / riesgo_por_acción;
+    (2) techo de banda — recortar si la inversión bruta supera el máximo;
+    (3) suelo de banda — subir acciones enteras hasta alcanzar el mínimo (la
+        INVERSIÓN MANDA, opción 'b': el suelo se respeta aunque el riesgo suba del
+        % del régimen — el tope agregado R6 sigue siendo el límite duro);
+    (4) techo absoluto de capital = max_position_value (MAX_POSITION_PCT).
+
+    Ej.: acción de €400 → 1 acc (€400) < suelo €500 → 2 acc (€800)."""
+    if risk_per_share <= 0 or entry <= 0:
+        return 0
+    shares = max(1, int(target_risk / risk_per_share))         # (1) base por riesgo
+    if shares * entry > MAX_INVEST_PER_TRADE:                   # (2) techo de banda
+        shares = max(1, int(MAX_INVEST_PER_TRADE / entry))
+    while shares * entry < MIN_INVEST_PER_TRADE:               # (3) suelo de banda
+        shares += 1
+    cap = max(1, int(max_position_value / entry))               # (4) tope de capital
+    return max(1, min(shares, cap))
+
+
+def open_position_risk(portfolio) -> float:
+    """R6 — riesgo abierto agregado ($) de la cartera = Σ (distancia al stop × acciones).
+
+    Por posición: riesgo = (precio − stop)·qty en longs, (stop − precio)·qty en cortos.
+    Si una posición NO tiene stop colocado se asume un stop por defecto a DEFAULT_STOP_PCT
+    (decisión del operador, opción 'a': contar el riesgo real, no ignorarlo). Una posición
+    en verde con el stop ya sobre el precio (ganancia asegurada) aporta riesgo 0.
+
+    Nota: como en R1/R2, los valores de cartera vienen en USD y PORTFOLIO_VALUE en EUR;
+    se tratan a la par (~paridad), simplificación heredada del cálculo de exposición."""
+    if not portfolio:
+        return 0.0
+    total = 0.0
+    for p in portfolio.get("acciones", []) + portfolio.get("etfs", []):
+        qty = p.get("cantidad", 0) or 0
+        px = p.get("precio_actual_usd") or p.get("bep_usd") or 0
+        if qty <= 0 or px <= 0:
+            continue
+        stop = p.get("stop_loss")
+        direction = (p.get("direccion") or "long").lower()
+        if stop and stop > 0:
+            rps = (stop - px) if direction == "short" else (px - stop)
+        else:
+            rps = px * DEFAULT_STOP_PCT  # sin stop → opción (a): stop por defecto
+        if rps > 0:
+            total += rps * qty
+    return round(total, 2)
 
 
 def build_tier_map(candidates) -> dict:

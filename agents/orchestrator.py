@@ -9,10 +9,11 @@ from config import (
     ANTHROPIC_API_KEY, CONTEXT_DIR, OUTPUT_DIR, LOGS_DIR,
     SCORE_WEIGHTS, FINAL_REPORT_N, US_MARKET_HOLIDAYS_2026,
     TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
-    PORTFOLIO_VALUE, SUBTHEME_MAX_PCT,
+    PORTFOLIO_VALUE, SUBTHEME_MAX_PCT, PORTFOLIO_RISK_CAP_PCT,
 )
 from utils.risk_policy import (
     build_tier_map, classify_tier, high_beta_cap, is_high_beta, is_explicitly_classified,
+    open_position_risk,
 )
 from agents.market_scanner import MarketScanner
 from agents.fundamental_analyst import FundamentalAnalyst
@@ -325,12 +326,13 @@ class TradingOrchestrator:
         return final
 
     def _apply_exposure_caps(self, final, tier_map, portfolio, market_conditions) -> list:
-        """R1 (cap de alta beta por régimen) + R2 (concentración por sub-tema).
+        """R1 (cap de alta beta por régimen) + R2 (concentración por sub-tema)
+        + R6 (tope de riesgo agregado de cartera).
 
         Recorre los longs aceptados (BUY/STRONG BUY) por ranking y degrada a WATCH
-        los que romperían el cap, contando la cartera existente como exposición ya
-        consumida. Los cortos no se tocan (R4). Greedy: el mejor score se queda con
-        el presupuesto.
+        los que romperían algún tope, contando la cartera existente como ya consumida.
+        R6 cuenta para TODOS los longs (cualquier tier); R1/R2 solo para alta beta.
+        Los cortos no se tocan (R4). Greedy: el mejor score se queda con el presupuesto.
         """
         if not final or market_conditions is None:
             return final
@@ -338,6 +340,8 @@ class TradingOrchestrator:
         cap = high_beta_cap(market_conditions)                  # R1
         hb_budget = cap * PORTFOLIO_VALUE                        # $ máx en alta beta
         subtheme_budget = SUBTHEME_MAX_PCT * hb_budget          # R2 base estable
+        risk_cap = PORTFOLIO_RISK_CAP_PCT * PORTFOLIO_VALUE     # R6 tope riesgo agregado
+        risk_used = open_position_risk(portfolio)               # R6 riesgo ya abierto
 
         # Exposición ya consumida por la cartera existente
         high_beta_val = 0.0
@@ -365,7 +369,9 @@ class TradingOrchestrator:
         self.logger.info(
             f"R1/R2: cap alta beta {cap:.0%} (${hb_budget:,.0f}), "
             f"sub-tema máx ${subtheme_budget:,.0f}. "
-            f"Cartera ya consume ${high_beta_val:,.0f} alta beta."
+            f"Cartera ya consume ${high_beta_val:,.0f} alta beta. "
+            f"R6: tope riesgo {PORTFOLIO_RISK_CAP_PCT:.0%} (${risk_cap:,.0f}), "
+            f"abierto ya ${risk_used:,.0f}."
         )
 
         for fc in final:  # ya ordenado por score
@@ -374,21 +380,28 @@ class TradingOrchestrator:
             risk = fc.risk_data
             if not risk:
                 continue
-            tier, sub = tier_map.get(fc.ticker.upper()) or classify_tier(fc.ticker)
-            if not is_high_beta(tier):
-                continue  # Tier A no consume presupuesto de alta beta
 
-            val = (risk.position_size_shares or 0) * (risk.entry_price or 0)
-
-            if high_beta_val + val > hb_budget:
-                self._demote(fc, f"R1 cap alta beta {cap:.0%} superado")
+            # R6 — tope de riesgo agregado (todos los longs, cualquier tier)
+            new_risk = risk.max_loss_dollars or 0
+            if risk_used + new_risk > risk_cap:
+                self._demote(fc, f"R6 riesgo agregado >{PORTFOLIO_RISK_CAP_PCT:.0%}")
                 continue
-            if tier == "C":
-                if subtheme_val.get(sub, 0.0) + val > subtheme_budget:
-                    self._demote(fc, f"R2 concentración sub-tema '{sub}' >40%")
+
+            # R1/R2 — solo alta beta consume presupuesto de exposición
+            tier, sub = tier_map.get(fc.ticker.upper()) or classify_tier(fc.ticker)
+            if is_high_beta(tier):
+                val = (risk.position_size_shares or 0) * (risk.entry_price or 0)
+                if high_beta_val + val > hb_budget:
+                    self._demote(fc, f"R1 cap alta beta {cap:.0%} superado")
                     continue
-                subtheme_val[sub] = subtheme_val.get(sub, 0.0) + val
-            high_beta_val += val
+                if tier == "C":
+                    if subtheme_val.get(sub, 0.0) + val > subtheme_budget:
+                        self._demote(fc, f"R2 concentración sub-tema '{sub}' >40%")
+                        continue
+                    subtheme_val[sub] = subtheme_val.get(sub, 0.0) + val
+                high_beta_val += val
+
+            risk_used += new_risk  # aceptada → consume riesgo agregado (R6)
 
         return final
 

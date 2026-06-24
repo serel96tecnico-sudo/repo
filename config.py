@@ -1,5 +1,6 @@
 from pathlib import Path
 from dotenv import load_dotenv
+import json
 import os
 
 # Verificación TLS contra el almacén de certificados de Windows.
@@ -51,14 +52,35 @@ NEAR_52W_HIGH_PCT = 0.85
 RSI_OVERSOLD = 30
 RSI_OVERBOUGHT = 70
 
-PORTFOLIO_VALUE = float(os.environ.get("PORTFOLIO_VALUE", "10000"))
+# MA200 multi-timeframe (tendencia mayor). "media de 200 sesiones" = SMA200.
+# El TecnicalAnalyst la calcula en semanal/diario/4h y la inyecta en score+prompt.
+MA200_PERIOD = 200
+MA200_DAILY_PERIOD = "6y"      # ~1500 velas diarias: sirve para MA200 diaria + resample semanal
+MA200_4H_PERIOD = "220d"       # suficiente para ≥200 velas de 4h
+MA200_CONFLUENCE_MAX = 1.5     # modificador máx (+/-) al ta_score por confluencia de MA200
+
+# Capital real operado por el pipeline = broker_1 (DeGiro) + broker_2 (Colmex),
+# leído dinámicamente de los balances en contex/portfolio.json para que se ajuste
+# solo cada día. Broker_3 (CFDs, manual) queda fuera. USD~EUR a la par (misma
+# simplificación que R1/R2/R6). Fallback a $PORTFOLIO_VALUE/7000 si no hay fichero.
+def _compute_portfolio_value() -> float:
+    fallback = float(os.environ.get("PORTFOLIO_VALUE", "7000"))
+    try:
+        pf = json.loads((CONTEXT_DIR / "portfolio.json").read_text(encoding="utf-8"))
+        brokers = pf.get("brokers", {})
+        b1 = brokers.get("broker_1", {})
+        b2 = brokers.get("broker_2", {})
+        total = float(b1.get("cuenta_completa_eur") or 0)                       # EUR
+        total += float(b2.get("balance_usd") or b2.get("projected_balance_usd") or 0)  # USD~EUR
+        return round(total, 2) if total > 0 else fallback
+    except Exception:
+        return fallback
+
+
+PORTFOLIO_VALUE = _compute_portfolio_value()
 MAX_POSITION_PCT = 0.20
 MIN_RR_RATIO = 1.5
 ATR_STOP_MULTIPLIER = 2.5
-
-# Riesgo fijo en dólares por operación (pérdida máxima si se toca el stop)
-MIN_RISK_PER_TRADE = float(os.environ.get("MIN_RISK_PER_TRADE", "500"))
-MAX_RISK_PER_TRADE = float(os.environ.get("MAX_RISK_PER_TRADE", "600"))
 
 SCORE_WEIGHTS = {"scan": 0.15, "fundamental": 0.15, "ta": 0.35, "sentiment": 0.15, "risk": 0.20}
 
@@ -75,9 +97,34 @@ HIGH_BETA_CAP_RISKOFF   = 0.40   # Downtrend/risk-off / VIX > 25
 # R2 — Concentración máx. de un sub-tema de Tier C dentro del presupuesto de alta beta
 SUBTHEME_MAX_PCT = 0.40
 
-# R3 — Half-size de nuevos longs de Tier C cuando NEUTRAL/Sideways y VIX >= umbral
-NEUTRAL_VIX_THRESHOLD = 20.0
-HALF_SIZE_FACTOR = 0.50
+# R3 (redefinida 2026-06-24) — Perfil de riesgo dinámico por trade, INVERSO al VIX.
+# Reemplaza al antiguo half-size fijo. El riesgo objetivo por operación (% del
+# PORTFOLIO_VALUE) sube en calma y baja en estrés. Mismos buckets de régimen que R1.
+#   shares = (RISK_PCT × PORTFOLIO_VALUE) / (entrada − stop), capado por MAX_POSITION_PCT.
+RISK_PCT_STRONG_UP = 0.03   # Strong Uptrend / VIX < 18  → €210 sobre 7k
+RISK_PCT_UPTREND   = 0.02   # Uptrend / VIX 18-22        → €140
+RISK_PCT_NEUTRAL   = 0.015  # NEUTRAL/Sideways / VIX>=20 → €105
+RISK_PCT_RISKOFF   = 0.01   # Downtrend/risk-off / VIX>25 → €70
+
+# Banda de inversión bruta por operación (decisión del operador). El motor de
+# riesgo (RISK_PCT) propone el tamaño y se acota a esta banda. La INVERSIÓN MANDA
+# a nivel de trade: el suelo se respeta con acciones enteras aunque eleve el riesgo
+# por encima del % del régimen (p.ej. acción de €400 → mínimo 2 acciones = €800);
+# el tope agregado de cartera (R6) sigue siendo el límite duro. Capado además por
+# MAX_POSITION_PCT como techo absoluto de capital.
+MIN_INVEST_PER_TRADE = 500.0
+MAX_INVEST_PER_TRADE = 800.0
+
+# R6 (nueva 2026-06-24) — Tope de riesgo agregado de cartera. La suma del riesgo
+# abierto (posiciones existentes + nuevas) no puede superar este % del capital.
+# Es el verdadero freno al clúster correlacionado (la lección del 5-jun: VIX bajo
+# NO protege de un giro de factor). Aplicado en orchestrator._apply_exposure_caps.
+PORTFOLIO_RISK_CAP_PCT = 0.10   # €700 sobre 7k
+
+# Stop por defecto para una posición SIN stop colocado, al calcular el riesgo
+# agregado de R6 (opción del operador: usar el stop definido/sugerido; si no hay,
+# asumir este % por debajo del precio). Fuerza a contar el riesgo real, no a ignorarlo.
+DEFAULT_STOP_PCT = 0.08
 
 # ── R5 — Calidad de entrada ("exigir fuerza, no comprar debilidad") ──────────
 # Calibrado con backtest_entry_quality.py (83 recs largas, 06/05-15/06):

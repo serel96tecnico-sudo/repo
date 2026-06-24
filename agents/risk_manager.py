@@ -5,11 +5,10 @@ import anthropic
 from agents.base_agent import BaseAgent
 from config import (
     PORTFOLIO_VALUE, MAX_POSITION_PCT, MIN_RR_RATIO, ATR_STOP_MULTIPLIER, RISK_TOP_N,
-    MIN_RISK_PER_TRADE, MAX_RISK_PER_TRADE, MODEL_PREMIUM, HALF_SIZE_FACTOR,
-    WEAK_ENTRY_ATR_MIN,
+    MODEL_PREMIUM, WEAK_ENTRY_ATR_MIN,
 )
 from models.schemas import TAResult, SentimentResult, RiskResult
-from utils.risk_policy import classify_tier, is_neutral_high_vol
+from utils.risk_policy import classify_tier, risk_pct_for_regime, size_position
 
 
 RISK_SYSTEM = """You are a professional risk manager for a swing trading desk.
@@ -42,11 +41,12 @@ class RiskManager(BaseAgent):
         results = []
         top = ta_results[:RISK_TOP_N]
         tier_map = tier_map or {}
-        half_size_regime = is_neutral_high_vol(market_conditions)
-        if half_size_regime:
-            self.logger.info(
-                "  R3 activa: NEUTRAL + VIX>=20 → nuevos longs Tier C a media posición"
-            )
+        # R3 (redefinida) — riesgo por trade dinámico según régimen/VIX (1-3%).
+        risk_pct = risk_pct_for_regime(market_conditions)
+        self.logger.info(
+            f"  R3 riesgo dinámico: {risk_pct:.1%} de €{PORTFOLIO_VALUE:.0f} "
+            f"= €{risk_pct * PORTFOLIO_VALUE:.0f} por trade"
+        )
         self.logger.info(f"Running risk assessment on {len(top)} candidates...")
 
         # Tickers ya en cartera — evitar doblar posición
@@ -71,7 +71,7 @@ class RiskManager(BaseAgent):
             tier, subtheme = tier_map.get(ta.ticker.upper()) or classify_tier(ta.ticker)
             result = self._calculate_risk_params(
                 ta, sent, session=session,
-                tier=tier, subtheme=subtheme, half_size_regime=half_size_regime,
+                tier=tier, subtheme=subtheme, risk_pct=risk_pct,
             )
 
             if result and result.rr_ratio_1 >= MIN_RR_RATIO:
@@ -84,7 +84,7 @@ class RiskManager(BaseAgent):
         return results
 
     def _calculate_risk_params(self, ta: TAResult, sent: SentimentResult = None, session: str = "morning",
-                               tier: str = "", subtheme: str = "", half_size_regime: bool = False) -> RiskResult:
+                               tier: str = "", subtheme: str = "", risk_pct: float = 0.02) -> RiskResult:
         try:
             price = ta.indicators.get("price", 0) or getattr(ta, "last_price", 0)
             atr = ta.indicators.get("atr_14") or (price * 0.02)
@@ -190,22 +190,24 @@ class RiskManager(BaseAgent):
                 rr1 = round((target_1 - entry) / risk_per_share, 2) if risk_per_share > 0 else 0
                 rr2 = round((target_2 - entry) / risk_per_share, 2) if risk_per_share > 0 else 0
 
-            # Número de acciones: basado en riesgo fijo, con tope de capital
-            target_risk = (MIN_RISK_PER_TRADE + MAX_RISK_PER_TRADE) / 2  # $550
-            # R3 — half-size de nuevos longs Tier C en NEUTRAL + VIX>=20
-            sizing_note = ""
-            if half_size_regime and direction != "short" and tier == "C":
-                target_risk *= HALF_SIZE_FACTOR
-                sizing_note = "R3 half-size (Tier C, NEUTRAL+VIX>=20)"
-                self.logger.info(
-                    f"  {ta.ticker}: R3 half-size aplicado (Tier C / {subtheme or 'otros'})"
-                )
-            shares_by_risk = max(1, int(target_risk / risk_per_share))
-            shares_by_capital = max(1, int(PORTFOLIO_VALUE * MAX_POSITION_PCT / entry))
-            position_size_shares = min(shares_by_risk, shares_by_capital)
+            # Número de acciones: riesgo objetivo dinámico (R3) acotado por la banda
+            # de inversión bruta €500-800 (la inversión manda: ver size_position).
+            # target_risk = % del régimen × capital (sube en calma, baja en estrés).
+            target_risk = risk_pct * PORTFOLIO_VALUE
+            position_size_shares = size_position(
+                target_risk, risk_per_share, entry, PORTFOLIO_VALUE * MAX_POSITION_PCT
+            )
             position_size_dollars = position_size_shares * entry
             position_size_pct = round(position_size_dollars / PORTFOLIO_VALUE * 100, 1)
             max_loss = round(position_size_shares * risk_per_share, 2)
+            actual_risk_pct = max_loss / PORTFOLIO_VALUE if PORTFOLIO_VALUE else 0.0
+            sizing_note = (
+                f"R3 riesgo {risk_pct:.1%} (€{target_risk:.0f}); "
+                f"inversión €{position_size_dollars:.0f} [banda 500-800]"
+            )
+            if actual_risk_pct > risk_pct + 0.001:
+                # El suelo de €500 elevó el riesgo por encima del % del régimen (opción b)
+                sizing_note += f"; suelo eleva riesgo a {actual_risk_pct:.1%}"
 
             risk_score = self._ask_claude_risk_score(ta, entry, stop_loss, target_1, target_2, rr1, sent)
 
