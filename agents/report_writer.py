@@ -126,20 +126,59 @@ Narrativa del setup 1 en una sola línea continua sin saltos de línea.
 Narrativa del setup 2 en una sola línea continua sin saltos de línea.
 ==="""
 
+        # Descripción determinista por candidato — garantiza que SIEMPRE haya
+        # narrativa aunque la API de Claude esté caída/sobrecargada.
+        fallbacks = [self._fallback_summary(fc) for fc in candidates]
+
         try:
             raw = self._call_claude(REPORT_SYSTEM, user_msg, max_tokens=2048)
             parts = [p.strip() for p in raw.split("===") if p.strip()]
-            if len(parts) >= len(candidates):
-                return parts[:len(candidates)]
-            # fallback: try to get at least something
-            if parts:
-                while len(parts) < len(candidates):
-                    parts.append("")
-                return parts
-            return ["" for _ in candidates]
         except Exception as e:
-            self.logger.error(f"Summary generation failed: {e}")
-            return ["" for _ in candidates]
+            self.logger.error(
+                f"Summary generation failed ({e}) — usando descripción determinista"
+            )
+            return fallbacks
+
+        # Mezcla: narrativa de la IA si existe para ese índice, si no el fallback.
+        # Así un parseo parcial o una respuesta corta nunca deja un trade sin describir.
+        out = []
+        for i in range(len(candidates)):
+            ai = parts[i] if i < len(parts) else ""
+            out.append(ai if ai else fallbacks[i])
+        return out
+
+    def _fallback_summary(self, fc) -> str:
+        """Narrativa determinista construida desde los datos del setup (sin LLM).
+        Se usa cuando la generación con Claude falla o devuelve un bloque vacío."""
+        ta = fc.ta_data
+        risk = fc.risk_data
+        sent = fc.sentiment_data
+        fund = fc.fundamental_data
+
+        direction = (ta.direction if ta else "long")
+        dir_label = "Largo" if direction == "long" else "Corto"
+        head = f"{dir_label} — {ta.pattern_detected}" if ta and ta.pattern_detected else dir_label
+
+        bits = [head]
+        if risk:
+            bits.append(
+                f"entrada ${risk.entry_price:.2f}, stop ${risk.stop_loss:.2f}, "
+                f"T1 ${risk.target_1:.2f} (R:R 1:{risk.rr_ratio_1:.1f})"
+            )
+        if risk and risk.entry_note:
+            bits.append(risk.entry_note.rstrip("."))
+        if sent and sent.catalyst_found and sent.catalyst_description:
+            bits.append(f"Catalizador: {sent.catalyst_description.strip()[:180]}")
+
+        flags = []
+        if sent and sent.risk_flags:
+            flags += sent.risk_flags
+        if fund and fund.risk_flags:
+            flags += fund.risk_flags
+        if flags:
+            bits.append(f"Riesgo: {', '.join(sorted(set(flags)))}")
+
+        return "[auto] " + ". ".join(b for b in bits if b) + "."
 
     def _format_report_text(
         self,
