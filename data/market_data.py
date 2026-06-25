@@ -36,6 +36,31 @@ from config import ALPACA_API_KEY, ALPACA_API_SECRET
 logger = get_logger(__name__)
 
 
+def classify_trend(price: float, e9: float, e21: float, e50: float) -> str:
+    """Etiqueta de tendencia por la estructura COMPLETA de EMAs (incluida la EMA50),
+    no solo las medias cortas.
+
+    Antes "Downtrend" era `price < e9 < e21` e IGNORABA la EMA50: cualquier pullback
+    de 2-3 días en plena tendencia alcista cruzaba las cortas y se etiquetaba
+    "Downtrend", penalizando largos y desbloqueando cortos. Ahora un downtrend exige
+    que la estructura de fondo esté rota (e21 < e50); si el precio cae bajo las cortas
+    pero e21 sigue > e50 y el precio sobre la EMA50, es un PULLBACK alcista (ocasión de
+    largos), no un cambio de tendencia.
+    """
+    if price > e9 > e21 > e50:
+        return "Strong Uptrend"
+    elif price > e21 > e50:
+        return "Uptrend"
+    elif e21 > e50 and price > e50:
+        return "Pullback"
+    elif price < e9 < e21 < e50:
+        return "Strong Downtrend"
+    elif price < e21 < e50:
+        return "Downtrend"
+    else:
+        return "Sideways"
+
+
 def classify_regime(spy_trend: str, vix_level: float) -> str:
     """Régimen COHERENTE = dirección del precio (spy_trend) matizada por el miedo (VIX).
 
@@ -48,6 +73,10 @@ def classify_regime(spy_trend: str, vix_level: float) -> str:
         return "BEARISH — tendencia bajista o alta tensión, reducir exposición"
     if vix_level >= 20 or spy_trend in ("Sideways", "Unknown", ""):
         return "NEUTRAL — volatilidad elevada o sin tendencia, ser selectivo"
+    if spy_trend == "Pullback":
+        # Dip dentro de tendencia alcista (estructura intacta, VIX contenido): no es
+        # risk-off. Régimen NEUTRAL (R1/R3 cautos) pero sesgo a buscar largos.
+        return "NEUTRAL — pullback en tendencia alcista, buscar largos en buenas acciones"
     if spy_trend in ("Uptrend", "Strong Uptrend"):
         return "BULLISH — tendencia alcista con volatilidad contenida, favor longs"
     return "NEUTRAL — sin señal clara, ser selectivo"
@@ -430,6 +459,7 @@ class MarketDataFetcher:
                     qqq_price = float(qqq.iloc[-1])
                     qqq_ema9 = float(qqq.ewm(span=9, adjust=False).mean().iloc[-1])
                     qqq_ema21 = float(qqq.ewm(span=21, adjust=False).mean().iloc[-1])
+                    qqq_ema50 = float(qqq.ewm(span=50, adjust=False).mean().iloc[-1])
                     alpaca_ok = True
                 except Exception as e:
                     logger.warning(f"Alpaca market overview failed: {e}")
@@ -445,6 +475,7 @@ class MarketDataFetcher:
                 qqq_price = float(qqq.iloc[-1])
                 qqq_ema9 = float(qqq.ewm(span=9, adjust=False).mean().iloc[-1])
                 qqq_ema21 = float(qqq.ewm(span=21, adjust=False).mean().iloc[-1])
+                qqq_ema50 = float(qqq.ewm(span=50, adjust=False).mean().iloc[-1])
 
             # VIX — yfinance/Stooq (^VIX not available on Alpaca). Robust fetch with
             # last-good cache; never silently defaults to a magic 20.0 that flips regime.
@@ -487,18 +518,8 @@ class MarketDataFetcher:
                 except Exception:
                     pass
 
-            def trend(price, e9, e21, e50):
-                if price > e9 > e21 > e50:
-                    return "Strong Uptrend"
-                elif price > e21 > e50:
-                    return "Uptrend"
-                elif price < e9 < e21:
-                    return "Downtrend"
-                else:
-                    return "Sideways"
-
-            spy_trend = trend(spy_price, spy_ema9, spy_ema21, spy_ema50)
-            qqq_trend = trend(qqq_price, qqq_ema9, qqq_ema21, qqq_price)
+            spy_trend = classify_trend(spy_price, spy_ema9, spy_ema21, spy_ema50)
+            qqq_trend = classify_trend(qqq_price, qqq_ema9, qqq_ema21, qqq_ema50)
 
             regime = classify_regime(spy_trend, vix_level)
 

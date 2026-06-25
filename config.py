@@ -136,6 +136,17 @@ DEFAULT_STOP_PCT = 0.08
 # a mercado, exigir recuperación de fuerza sobre la EMA9. Aplicado en risk_manager.
 WEAK_ENTRY_ATR_MIN = 0.5
 
+# ── R4 — Guardia de entrada para cortos (simétrico a R5) ─────────────────────
+# R4 entra el corto en el pullback a la EMA9. Pero cuando el precio se ha
+# desplomado MUY por debajo de la EMA9 (downtrend agudo), ese rebote-entrada
+# queda irreal (p.ej. RKLB 2026-06-25: precio 80.85, entrada en EMA9 97 = +20%):
+# no se llenaría e infla el stop/riesgo. Igual que R5 evita "comprar debilidad"
+# en largos, esto evita "cortar un valor ya desplomado": si la distancia
+# precio↔EMA9 supera SHORT_EXTENDED_ATR_MAX ATR, el corto es WATCH-only (no
+# genera SELL accionable con fill fantasma; se mantiene la entrada en EMA9 como
+# referencia y se anota el motivo). Aplicado en risk_manager + orchestrator.
+SHORT_EXTENDED_ATR_MAX = 1.5
+
 BROKER2_COMMISSION = 5.00  # $2.50 entrada + $2.50 salida = $5.00 ida+vuelta
 
 RUN_TIME = os.environ.get("RUN_TIME", "15:00")

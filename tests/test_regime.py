@@ -4,7 +4,7 @@ Cubre el bug 2026-06-24: el régimen salía 'BULLISH' (solo VIX) con el SPY en
 Downtrend, y el filtro de cortos lo trataba como mercado alcista bloqueando shorts.
 """
 
-from data.market_data import classify_regime
+from data.market_data import classify_regime, classify_trend
 
 
 def test_downtrend_low_vix_is_bearish_not_bullish():
@@ -40,3 +40,42 @@ def test_unknown_trend_falls_back_safely():
 def test_invariant_never_bullish_in_downtrend():
     for vix in (10, 15, 19, 25, 31):
         assert not classify_regime("Downtrend", vix).startswith("BULLISH")
+
+
+def test_pullback_low_vix_is_neutral_long_biased():
+    # Dip en tendencia alcista, VIX contenido: NEUTRAL (no risk-off) con sesgo a largos
+    r = classify_regime("Pullback", 17.9)
+    assert r.startswith("NEUTRAL")
+    assert "largos" in r
+
+
+def test_pullback_elevated_vix_is_generic_neutral():
+    assert classify_regime("Pullback", 22.0).startswith("NEUTRAL")
+
+
+# ── Clasificador de tendencia (estructura completa con EMA50) ──────────────────
+
+def test_trend_pullback_not_downtrend():
+    # Precio bajo las cortas (e9, e21) pero estructura de fondo intacta (e21 > e50,
+    # precio > e50) → PULLBACK alcista, NO Downtrend. Es el bug del 2026-06-25.
+    assert classify_trend(price=96, e9=97, e21=98, e50=95) == "Pullback"
+
+
+def test_trend_real_downtrend_requires_broken_structure():
+    # Estructura de fondo rota (e21 < e50), pero el precio aún sobre la e9 → Downtrend
+    # (no Strong): exige e21 < e50, cosa que la lógica antigua ignoraba.
+    assert classify_trend(price=96, e9=95, e21=97, e50=99) == "Downtrend"
+
+
+def test_trend_strong_downtrend_full_stack():
+    assert classify_trend(price=88, e9=90, e21=95, e50=98) == "Strong Downtrend"
+
+
+def test_trend_strong_and_plain_uptrend():
+    assert classify_trend(price=110, e9=108, e21=105, e50=100) == "Strong Uptrend"
+    assert classify_trend(price=106, e9=104, e21=105, e50=100) == "Uptrend"
+
+
+def test_trend_pullback_below_ema50_is_not_pullback():
+    # Si el precio pierde la EMA50 ya no es un simple pullback (estructura cediendo)
+    assert classify_trend(price=94, e9=96, e21=97, e50=95) != "Pullback"

@@ -173,6 +173,7 @@ class RiskResult:
     subtheme: str = ""       # sub-tema de Tier C (R2), vacío si no aplica
     sizing_note: str = ""    # p.ej. "R3 half-size (Tier C, NEUTRAL+VIX>=20)"
     entry_note: str = ""     # guía de entrada (paso 2): pullback / confirmación+retest
+    entry_extended: bool = False  # corto sobre-extendido (precio << EMA9): WATCH-only (R4 guard)
 
     def to_dict(self) -> dict:
         return asdict(self)

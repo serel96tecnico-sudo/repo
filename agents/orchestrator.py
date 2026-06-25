@@ -10,6 +10,7 @@ from config import (
     SCORE_WEIGHTS, FINAL_REPORT_N, US_MARKET_HOLIDAYS_2026,
     TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
     PORTFOLIO_VALUE, SUBTHEME_MAX_PCT, PORTFOLIO_RISK_CAP_PCT,
+    SHORT_EXTENDED_ATR_MAX,
 )
 from utils.risk_policy import (
     build_tier_map, classify_tier, high_beta_cap, is_high_beta, is_explicitly_classified,
@@ -255,6 +256,7 @@ class TradingOrchestrator:
                 # gestionan R1/R3 por separado.
                 bullish = spy in ("Strong Uptrend", "Uptrend")
                 strong_bullish = spy == "Strong Uptrend"
+                pullback = spy == "Pullback"
                 bearish = spy in ("Strong Downtrend", "Downtrend")
                 strong_bearish = spy == "Strong Downtrend"
 
@@ -265,6 +267,12 @@ class TradingOrchestrator:
                     block_short = is_short
                 elif bullish:
                     regime_adj = +0.5 if not is_short else -1.2
+                    short_min_score = 8.5
+                elif pullback:
+                    # Dip dentro de tendencia alcista: buscar largos en buenas acciones.
+                    # Cortos casi off (umbral 8.5, sin bonus). R5 sigue exigiendo que la
+                    # entrada larga espere el reclaim de fuerza (no se compra el cuchillo).
+                    regime_adj = +0.4 if not is_short else -1.0
                     short_min_score = 8.5
                 elif strong_bearish:
                     regime_adj = -1.0 if not is_short else +0.8
@@ -289,7 +297,13 @@ class TradingOrchestrator:
                     f"→ {composite_raw:.1f} → {composite:.1f}"
                 )
 
-            if is_short and block_short:
+            if is_short and getattr(risk, "entry_extended", False):
+                rec = "WATCH"
+                self.logger.info(
+                    f"  {ticker}: SHORT demoted to WATCH — R4 guard "
+                    f"(sobre-extendido: rebote-entrada >{SHORT_EXTENDED_ATR_MAX} ATR sobre precio)"
+                )
+            elif is_short and block_short:
                 rec = "WATCH"
                 self.logger.info(
                     f"  {ticker}: SHORT demoted to WATCH — blocked "

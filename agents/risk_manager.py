@@ -5,7 +5,7 @@ import anthropic
 from agents.base_agent import BaseAgent
 from config import (
     PORTFOLIO_VALUE, MAX_POSITION_PCT, MIN_RR_RATIO, ATR_STOP_MULTIPLIER, RISK_TOP_N,
-    MODEL_PREMIUM, WEAK_ENTRY_ATR_MIN,
+    MODEL_PREMIUM, WEAK_ENTRY_ATR_MIN, SHORT_EXTENDED_ATR_MAX,
 )
 from models.schemas import TAResult, SentimentResult, RiskResult
 from utils.risk_policy import classify_tier, risk_pct_for_regime, size_position
@@ -99,6 +99,7 @@ class RiskManager(BaseAgent):
 
             direction = getattr(ta, "direction", "long")
             entry_note = ""
+            entry_extended = False
 
             # Pipeline tarde: entrada a precio de mercado para ejecución antes del cierre
             near_market = (session == "evening")
@@ -117,6 +118,18 @@ class RiskManager(BaseAgent):
                 else:
                     # Precio sobre EMA9 — entrada límite cerca de EMA9/EMA21 (resistencia dinámica)
                     entry = round(min(price, max(ema9, ema21) * 1.002), 2)
+
+                # R4 guard (simétrico a R5): si la entrada en el pullback a EMA9
+                # queda demasiado lejos por encima del precio (valor ya desplomado),
+                # el corto es WATCH-only — el rebote no se llenaría y el riesgo se
+                # infla. Se mantiene la entrada como referencia y se anota el motivo.
+                if not near_market and atr and (entry - price) / atr > SHORT_EXTENDED_ATR_MAX:
+                    entry_extended = True
+                    entry_note = (
+                        f"R4: corto sobre-extendido — el rebote-entrada a EMA9 (${entry:.2f}) "
+                        f"queda {(entry - price) / atr:.1f} ATR (+{(entry / price - 1) * 100:.0f}%) "
+                        f"sobre el precio ${price:.2f}. WATCH-only: esperar el rebote, no perseguir."
+                    )
 
                 entry_zone_low = round(entry * 0.995, 2)
                 entry_zone_high = round(entry * 1.005, 2)
@@ -231,6 +244,7 @@ class RiskManager(BaseAgent):
                 subtheme=subtheme or "",
                 sizing_note=sizing_note,
                 entry_note=entry_note,
+                entry_extended=entry_extended,
             )
 
         except Exception as e:

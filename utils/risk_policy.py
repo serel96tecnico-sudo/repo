@@ -116,7 +116,7 @@ def high_beta_cap(market_conditions) -> float:
 
     if vix > 25 or "Downtrend" in spy or regime.startswith("BEAR"):
         return HIGH_BETA_CAP_RISKOFF
-    if vix >= 20 or "Sideways" in spy or regime.startswith("NEUTRAL"):
+    if vix >= 20 or spy in ("Sideways", "Pullback") or regime.startswith("NEUTRAL"):
         return HIGH_BETA_CAP_NEUTRAL
     if vix >= 18 or spy == "Uptrend":
         return HIGH_BETA_CAP_UPTREND
@@ -135,7 +135,7 @@ def risk_pct_for_regime(market_conditions) -> float:
 
     if vix > 25 or "Downtrend" in spy or regime.startswith("BEAR"):
         return RISK_PCT_RISKOFF
-    if vix >= 20 or "Sideways" in spy or regime.startswith("NEUTRAL"):
+    if vix >= 20 or spy in ("Sideways", "Pullback") or regime.startswith("NEUTRAL"):
         return RISK_PCT_NEUTRAL
     if vix >= 18 or spy == "Uptrend":
         return RISK_PCT_UPTREND

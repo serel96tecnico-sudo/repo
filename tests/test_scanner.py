@@ -12,7 +12,7 @@ def test_apply_basic_filters_price():
     scanner = MarketScanner.__new__(MarketScanner)
     quotes = {
         "VALID": {"price": 100.0, "volume": 2_000_000, "avg_vol_20d": 1_000_000, "change_pct": 1.0, "high_52w": 120.0, "low_52w": 80.0},
-        "TOO_CHEAP": {"price": 5.0, "volume": 2_000_000, "avg_vol_20d": 1_000_000, "change_pct": 0.0, "high_52w": 6.0, "low_52w": 4.0},
+        "TOO_CHEAP": {"price": 0.50, "volume": 2_000_000, "avg_vol_20d": 1_000_000, "change_pct": 0.0, "high_52w": 0.60, "low_52w": 0.40},
         "LOW_VOL": {"price": 50.0, "volume": 100_000, "avg_vol_20d": 100_000, "change_pct": 0.0, "high_52w": 55.0, "low_52w": 45.0},
     }
     candidates = scanner._apply_basic_filters(quotes)
