@@ -97,6 +97,67 @@ def find_support_resistance(
     return support, resistance
 
 
+def ma200_position(df: pd.DataFrame, period: int = 200) -> dict:
+    """Lectura de la media simple de 200 sesiones (SMA200) sobre un OHLCV.
+
+    Devuelve la MA200, la distancia del precio a ella (%), si el precio está por
+    encima y si la propia media tiene pendiente alcista (~1 mes). Si hay menos de
+    `period` barras devuelve None en lugar de una MA200 sesgada/falsa — así nunca
+    reportamos una media larga que no tiene datos suficientes detrás."""
+    close = df["Close"].dropna() if (df is not None and not df.empty and "Close" in df) else pd.Series(dtype=float)
+    bars = len(close)
+    if bars < period:
+        return {"ma200": None, "price_vs_ma200_pct": None, "above": None, "slope_up": None, "bars": bars}
+
+    sma = close.rolling(window=period).mean()
+    ma = float(sma.iloc[-1])
+    price = float(close.iloc[-1])
+    sma_valid = sma.dropna()
+    # Pendiente sobre ~21 barras (≈1 mes en diario / ~4-5 meses en semanal): tendencia de la media
+    ma_prev = float(sma_valid.iloc[-21]) if len(sma_valid) >= 21 else float(sma_valid.iloc[0])
+    return {
+        "ma200": round(ma, 4),
+        "price_vs_ma200_pct": round((price - ma) / ma * 100, 2) if ma else None,
+        "above": price > ma,
+        "slope_up": ma > ma_prev,
+        "bars": bars,
+    }
+
+
+def ma200_confluence_modifier(ma200: dict, direction: str = "long", cap: float = 1.5) -> float:
+    """Modificador al ta_score por confluencia de la MA200 en los tres marcos.
+
+    Alineado con la estrategia ("trend alignment / require strength, don't buy
+    weakness"): para LONGS, premia precio por encima de las MA200 (tendencia mayor
+    a favor) y penaliza comprar por debajo de la MA200 diaria/semanal; para SHORTS,
+    invierte la lógica. Marcos sin datos suficientes (None) no votan.
+
+    Voto por marco: +1 si el precio está del lado correcto, -1 si del contrario.
+    Bonus de pendiente cuando la media acompaña. Resultado escalado a [-cap, +cap].
+    """
+    frames = ["weekly", "daily", "4h"]
+    votes = 0.0
+    counted = 0
+    for f in frames:
+        rd = ma200.get(f) or {}
+        above = rd.get("above")
+        if above is None:
+            continue
+        counted += 1
+        favorable = above if direction == "long" else (not above)
+        votes += 1.0 if favorable else -1.0
+        slope_up = rd.get("slope_up")
+        if slope_up is not None:
+            slope_ok = slope_up if direction == "long" else (not slope_up)
+            votes += 0.34 if slope_ok else -0.34
+
+    if counted == 0:
+        return 0.0
+    # Normaliza por el máximo posible (1.34 por marco) y escala al cap
+    raw = votes / (counted * 1.34)
+    return round(max(-cap, min(cap, raw * cap)), 2)
+
+
 def calculate_all_indicators(df: pd.DataFrame) -> dict:
     close = df["Close"]
     high = df["High"]

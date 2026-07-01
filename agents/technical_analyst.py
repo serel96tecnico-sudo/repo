@@ -3,8 +3,19 @@ from datetime import datetime
 import anthropic
 
 from agents.base_agent import BaseAgent
-from config import TA_TOP_N
-from data.indicators import calculate_all_indicators, score_technical_setup
+from config import (
+    TA_TOP_N,
+    MA200_PERIOD,
+    MA200_DAILY_PERIOD,
+    MA200_4H_PERIOD,
+    MA200_CONFLUENCE_MAX,
+)
+from data.indicators import (
+    calculate_all_indicators,
+    score_technical_setup,
+    ma200_position,
+    ma200_confluence_modifier,
+)
 from data.market_data import MarketDataFetcher
 from models.schemas import ScanCandidate, TAResult
 
@@ -65,7 +76,11 @@ class TechnicalAnalyst(BaseAgent):
             indicators = calculate_all_indicators(df)
             python_score = score_technical_setup(indicators)
 
-            prompt_data = self._build_ta_prompt(candidate.ticker, indicators, python_score)
+            # Media de 200 sesiones en semanal/diario/4h (tendencia mayor)
+            ma200 = self._ma200_multiframe(candidate.ticker)
+            indicators["ma200"] = ma200
+
+            prompt_data = self._build_ta_prompt(candidate.ticker, indicators, python_score, ma200)
             schema = (
                 '{"direction": "long|short", "pattern_detected": "string", '
                 '"signals": {"rsi": "bullish|bearish|neutral", '
@@ -83,6 +98,11 @@ class TechnicalAnalyst(BaseAgent):
                 final_score = round(ta_score, 2)
             else:
                 final_score = round((ta_score + python_score) / 2, 2)
+
+            # Confluencia de la MA200 multi-timeframe: empuja el score hacia la
+            # tendencia mayor (a favor suma, en contra resta). Acotado a [0, 10].
+            ma_mod = ma200_confluence_modifier(ma200, direction, MA200_CONFLUENCE_MAX)
+            final_score = round(max(0.0, min(10.0, final_score + ma_mod)), 2)
 
             return TAResult(
                 ticker=candidate.ticker,
@@ -102,8 +122,53 @@ class TechnicalAnalyst(BaseAgent):
             self.logger.error(f"TA failed for {candidate.ticker}: {e}")
             return self._empty_result(candidate.ticker, today, price=candidate.price)
 
-    def _build_ta_prompt(self, ticker: str, indicators: dict, python_score: float) -> str:
+    def _ma200_multiframe(self, ticker: str) -> dict:
+        """SMA200 en semanal, diario y 4h. El histórico diario largo sirve para la
+        MA200 diaria y, resampleado a semanal, para la MA200 semanal (una sola
+        descarga). El 4h va por separado. Cada marco degrada a None si no llega a
+        MA200_PERIOD barras."""
+        empty = ma200_position(None, MA200_PERIOD)
+        out = {"weekly": dict(empty), "daily": dict(empty), "4h": dict(empty)}
+
+        # Diario (largo) → MA200 diaria + resample semanal
+        try:
+            daily = self.data_fetcher.fetch_ohlcv(ticker, period=MA200_DAILY_PERIOD, timeframe="day")
+            out["daily"] = ma200_position(daily, MA200_PERIOD)
+            if daily is not None and not daily.empty:
+                weekly = daily.resample("W").agg({
+                    "Open": "first", "High": "max", "Low": "min",
+                    "Close": "last", "Volume": "sum",
+                }).dropna()
+                out["weekly"] = ma200_position(weekly, MA200_PERIOD)
+        except Exception as e:
+            self.logger.warning(f"MA200 daily/weekly failed for {ticker}: {e}")
+
+        # 4h
+        try:
+            h4 = self.data_fetcher.fetch_ohlcv(ticker, period=MA200_4H_PERIOD, timeframe="4hour")
+            out["4h"] = ma200_position(h4, MA200_PERIOD)
+        except Exception as e:
+            self.logger.warning(f"MA200 4h failed for {ticker}: {e}")
+
+        return out
+
+    def _fmt_ma200(self, ma200: dict) -> str:
+        def line(label: str, rd: dict) -> str:
+            if not rd or rd.get("ma200") is None:
+                return f"{label}: N/A (datos insuficientes, {rd.get('bars', 0)} barras < {MA200_PERIOD})"
+            side = "ABOVE" if rd.get("above") else "BELOW"
+            slope = "rising" if rd.get("slope_up") else "falling"
+            return (f"{label}: MA200={rd['ma200']} | price {side} ({rd['price_vs_ma200_pct']:+}%) "
+                    f"| MA200 {slope}")
+        return "\n".join([
+            line("Weekly", ma200.get("weekly", {})),
+            line("Daily", ma200.get("daily", {})),
+            line("4H", ma200.get("4h", {})),
+        ])
+
+    def _build_ta_prompt(self, ticker: str, indicators: dict, python_score: float, ma200: dict = None) -> str:
         price = indicators.get("price", 0)
+        ma200 = ma200 or indicators.get("ma200") or {}
         return f"""Analyze {ticker} for a swing trade setup.
 
 Current Price: ${price:.2f}
@@ -111,8 +176,13 @@ Current Price: ${price:.2f}
 === TECHNICAL INDICATORS ===
 RSI(14): {indicators.get('rsi_14', 'N/A')} (prev: {indicators.get('rsi_prev', 'N/A')})
 MACD: {indicators.get('macd', 'N/A')} | Signal: {indicators.get('macd_signal', 'N/A')} | Histogram: {indicators.get('macd_histogram', 'N/A')} (prev: {indicators.get('macd_histogram_prev', 'N/A')})
-EMA9: {indicators.get('ema9', 'N/A')} | EMA21: {indicators.get('ema21', 'N/A')} | EMA50: {indicators.get('ema50', 'N/A')} | EMA200: {indicators.get('ema200', 'N/A')}
+EMA9: {indicators.get('ema9', 'N/A')} | EMA21: {indicators.get('ema21', 'N/A')} | EMA50: {indicators.get('ema50', 'N/A')}
 SMA20: {indicators.get('sma20', 'N/A')} | SMA50: {indicators.get('sma50', 'N/A')}
+
+=== 200-SESSION MA — MAJOR TREND (multi-timeframe) ===
+{self._fmt_ma200(ma200)}
+Major-trend rule: price above the 200 MA on all three frames = major uptrend (favor longs);
+below on daily/weekly = counter-trend for a long. Weight this in your ta_score.
 Bollinger: Upper={indicators.get('bb_upper', 'N/A')} | Mid={indicators.get('bb_middle', 'N/A')} | Lower={indicators.get('bb_lower', 'N/A')} | %B={indicators.get('bb_pct_b', 'N/A')}
 ATR(14): {indicators.get('atr_14', 'N/A')}
 ADX(14): {indicators.get('adx_14', 'N/A')}
