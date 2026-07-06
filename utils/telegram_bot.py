@@ -239,6 +239,31 @@ def _scan_async() -> None:
     threading.Thread(target=run, daemon=True).start()
 
 
+def _scan_ma200_async() -> None:
+    def run():
+        _send("Escaneando watchlist cerca de su MA200 (diaria)... (~2 min)")
+        try:
+            from agents.ma200_scanner import run_ma200_scanner
+            hits = run_ma200_scanner(notify=False)
+            if not hits:
+                _send("Ningun ticker dentro del margen de su MA200 ahora mismo.")
+                return
+            import datetime as dt
+            lines = [f"SCAN MA200 — {dt.datetime.now().strftime('%H:%M')}", ""]
+            for r in hits:
+                side = "sobre" if r["above"] else "bajo"
+                slope = "subiendo" if r["slope_up"] else "bajando"
+                lines.append(
+                    f"{r['ticker']}: ${r['price']:.2f}  MA200 ${r['ma200']:.2f}  "
+                    f"({r['price_vs_ma200_pct']:+.2f}% {side}, MA200 {slope})"
+                )
+            _send("\n".join(lines))
+        except Exception as e:
+            _send(f"Error en scan ma200: {e}")
+
+    threading.Thread(target=run, daemon=True).start()
+
+
 def _ayuda() -> str:
     return (
         "Comandos disponibles:\n"
@@ -247,6 +272,7 @@ def _ayuda() -> str:
         "/precio TICKER  — precio actual de un ticker\n"
         "/watchdog       — analizar posiciones: SL/TP cercanos, señales de giro\n"
         "/scan           — escanear watchlist en busca de entradas\n"
+        "/scan ma200     — escanear watchlist cerca de su MA200 (200 sesiones)\n"
         "/pipeline       — lanza analisis sesion manana\n"
         "/pipeline tarde — lanza analisis sesion tarde\n"
         "/cerrar TICKER precio [notas] — calcula P/L de cierre\n"
@@ -276,7 +302,10 @@ def _handle(message: dict) -> None:
     elif cmd in ("watchdog", "wdog", "posiciones"):
         _watchdog_async()
     elif cmd in ("scan", "escanear", "entradas"):
-        _scan_async()
+        if args and args[0].lower() in ("ma200", "200", "media200"):
+            _scan_ma200_async()
+        else:
+            _scan_async()
     elif cmd == "pipeline":
         session = "evening" if args and args[0] in ("tarde", "evening") else "morning"
         _pipeline_async(session)
