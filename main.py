@@ -133,6 +133,14 @@ def main():
         for fc in report.candidates[:5]:
             print(f"  #{fc.rank} {fc.ticker} — {fc.recommendation} (score: {fc.composite_score:.1f})")
 
+        # Marca en TradingView las recomendaciones BUY>=6 (no-fatal: si TV no está
+        # abierto o el puente falla, avisa y sigue — la señal por Telegram no depende de esto).
+        try:
+            import draw_levels
+            draw_levels.main()
+        except Exception as e:
+            print(f"(draw_levels: no se pudieron dibujar las marcas en TradingView: {e})")
+
 
 if __name__ == "__main__":
     main()
