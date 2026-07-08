@@ -102,7 +102,10 @@ FALLBACK_NDX100 = [
 
 class MarketDataFetcher:
     def __init__(self, context_dir: Path):
-        self.context_dir = context_dir
+        # Coerce to Path so callers passing a plain string (e.g. ad-hoc scripts) don't
+        # blow up later with a cryptic "unsupported operand '/' for str/str" when we do
+        # context_dir / "vix_last.json".
+        self.context_dir = Path(context_dir)
         self._alpaca_client = None
 
     def _get_alpaca_client(self):
