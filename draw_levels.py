@@ -23,6 +23,16 @@ import sys
 import time
 from pathlib import Path
 
+# La consola de Windows por defecto es cp1252 y no sabe codificar los caracteres
+# no-ASCII de los mensajes de progreso (✔, ·, →, ⚠). Bajo Task Scheduler eso
+# provoca un UnicodeEncodeError que aborta el dibujado a medias. Forzamos UTF-8
+# con errores tolerantes para que un print nunca pueda tumbar el proceso.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 # --- Configuración ------------------------------------------------------------
 ROOT = Path(__file__).parent
 OUTPUT_DIR = ROOT / "output"
