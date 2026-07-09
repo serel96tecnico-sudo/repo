@@ -158,6 +158,49 @@ def ma200_confluence_modifier(ma200: dict, direction: str = "long", cap: float =
     return round(max(-cap, min(cap, raw * cap)), 2)
 
 
+def detect_base_breakout(
+    high: pd.Series, low: pd.Series, close: pd.Series,
+    atr: pd.Series, ema200: pd.Series, lookback: int = 20, coil_max: float = 5.0,
+) -> dict:
+    """Base-breakout ATR-relativo (ruptura de canal/triángulo tras consolidación).
+
+    Validado 2026-07-09 (walk-forward, backtest_base_atr.py / backtest_walkforward.py):
+    en tendencia, una consolidación tensa RELATIVA AL ATR del propio nombre que rompe
+    al alza es la señal de más calidad — y la única que aguanta fuera de muestra en
+    nombres calientes (ATR≥8%: R/trade +0.50 IS → +0.75 OOS, vs +0.05 del momentum).
+    Muestra fina en ≥8% (~29 trades): tratar como refuerzo, no como certeza.
+
+    Condiciones (todas): rango de los `lookback` días previos ≤ coil_max·ATR, ATR
+    contraído vs `lookback` días atrás, hoy CIERRA sobre el techo de la base (y ayer
+    aún estaba dentro = ruptura fresca), y tendencia (precio>EMA200 en pendiente +).
+    """
+    off = {"base_breakout": False, "coil_ratio": None, "base_high": None}
+    n = len(close)
+    if n < lookback + 2 or atr is None:
+        return off
+    atr_last = float(atr.iloc[-1])
+    if pd.isna(atr_last) or atr_last <= 0:
+        return off
+    win_high = high.iloc[-(lookback + 1):-1]        # los `lookback` días previos
+    win_low = low.iloc[-(lookback + 1):-1]
+    cons_high, cons_low = float(win_high.max()), float(win_low.min())
+    coil_ratio = round((cons_high - cons_low) / atr_last, 2)
+
+    atr_ago = atr.iloc[-(lookback + 1)]
+    contracted = (not pd.isna(atr_ago)) and atr_last < float(atr_ago)
+
+    price, price_prev = float(close.iloc[-1]), float(close.iloc[-2])
+    breakout = price > cons_high and price_prev <= cons_high
+
+    ema_last = ema200.iloc[-1]
+    ema_ago = ema200.iloc[-21] if n >= 21 else np.nan
+    uptrend = (not pd.isna(ema_last) and not pd.isna(ema_ago)
+               and price > float(ema_last) and float(ema_last) > float(ema_ago))
+
+    is_bb = bool(coil_ratio <= coil_max and contracted and breakout and uptrend)
+    return {"base_breakout": is_bb, "coil_ratio": coil_ratio, "base_high": round(cons_high, 2)}
+
+
 def calculate_all_indicators(df: pd.DataFrame) -> dict:
     close = df["Close"]
     high = df["High"]
@@ -177,6 +220,7 @@ def calculate_all_indicators(df: pd.DataFrame) -> dict:
     adx = calculate_adx(high, low, close)
     vol_sma20 = calculate_sma(volume, 20)
     support, resistance = find_support_resistance(close)
+    base = detect_base_breakout(high, low, close, atr, ema200)
 
     last = lambda s: round(float(s.iloc[-1]), 4) if not pd.isna(s.iloc[-1]) else None
     prev = lambda s: round(float(s.iloc[-2]), 4) if len(s) > 1 and not pd.isna(s.iloc[-2]) else None
@@ -211,6 +255,9 @@ def calculate_all_indicators(df: pd.DataFrame) -> dict:
         "resistance_levels": [round(r, 2) for r in resistance],
         "high_52w": round(float(high.tail(252).max()), 2),
         "low_52w": round(float(low.tail(252).min()), 2),
+        "base_breakout": base["base_breakout"],
+        "coil_ratio": base["coil_ratio"],
+        "base_high": base["base_high"],
     }
 
 
@@ -261,5 +308,11 @@ def score_technical_setup(indicators: dict) -> float:
         score += 1.5
     elif adx >= 20:
         score += 0.75
+
+    # Base-breakout ATR-relativo: la señal de más calidad (validada walk-forward,
+    # 2026-07-09). Refuerzo moderado — sólido en <3% ATR, prometedor pero de muestra
+    # fina en ≥8%. Ver detect_base_breakout() y docs/estrategia_riesgo.md §R5.
+    if indicators.get("base_breakout"):
+        score += 2.0
 
     return round(min(score, 10.0), 2)

@@ -187,6 +187,7 @@ Bollinger: Upper={indicators.get('bb_upper', 'N/A')} | Mid={indicators.get('bb_m
 ATR(14): {indicators.get('atr_14', 'N/A')}
 ADX(14): {indicators.get('adx_14', 'N/A')}
 Volume ratio vs 20d avg: {indicators.get('volume_ratio_20d', 'N/A')}x
+Base-breakout (coil→ruptura, ATR-relativo): {'YES — coil ' + str(indicators.get('coil_ratio')) + '·ATR, rompe base @ ' + str(indicators.get('base_high')) + ' (setup de más calidad: consolidación tensa que rompe al alza en tendencia — favorécelo en el ta_score)' if indicators.get('base_breakout') else 'no'}
 52w High: {indicators.get('high_52w', 'N/A')} | 52w Low: {indicators.get('low_52w', 'N/A')}
 Support levels: {indicators.get('support_levels', [])}
 Resistance levels: {indicators.get('resistance_levels', [])}

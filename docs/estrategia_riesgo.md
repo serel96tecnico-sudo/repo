@@ -103,6 +103,24 @@ Y por tier en el subconjunto extendido (>1 ATR), el **breakout extendido de Tier
 
 > Cautelas (§7): muestra pequeña y **un solo régimen** (may-jun, tendencial). En NEUTRAL/bajista los breakouts fallan más y esto podría girar; revisar con más datos. Evitar comprar debilidad es seguro en cualquier régimen (no compras cuchillos cayendo); el "entrar a mercado con fuerza" está validado en tendencia. Sesión de tarde (`evening`): entrada a mercado sin cambios.
 
+#### R5b — Base-breakout ATR-relativo (calidad de SEÑAL, no de entrada) — añadido 2026-07-09
+Decisión del operador: las señales de momentum "a pelo" (perseguir máximo de N días) generaban entradas que abrían en rojo, sobre todo en nombres hipervolátiles (caso CIFR, 2026-07-09: ATR ~10 % del precio → tras +10 % en 2 días, 72 % de caída intradía ≥2 %). Se buscó un setup de más calidad: **ruptura de canal/triángulo tras una consolidación tensa**.
+
+**Metodología (3 backtests sobre 105 tickers, ~2,4 años, `backtest_entry_modes.py` → `_robustness.py` → `_base_breakout.py` → `_base_atr.py` → `_walkforward.py`).** Se probaron y **descartaron** dos ideas antes de llegar a la buena:
+- *Pullback-limit en la EMA9 para ATR alto*: robusto a parámetros pero **se cayó fuera de muestra** (≥8 % ATR: +0.358 IS → +0.017 OOS). Descartado — era efecto de régimen.
+- *Extension-guard* (no comprar tras subidón): las señales descartadas rendían **+0.157R** (buenas). Descartado — confirma que la extensión no es el problema (coherente con R5).
+
+Lo que **sí** sobrevivió al walk-forward (IS→OOS), única señal que aguanta en nombres calientes:
+
+| Señal en ≥8 % ATR | R/trade IS | R/trade OOS | win OOS |
+|---|---|---|---|
+| Momentum (máximo 10 sesiones) | +0.043 | +0.051 | 37 % |
+| **Base-breakout (coil ≤5·ATR)** | **+0.500** | **+0.754** | **63 %** |
+
+**Regla (capa de indicadores, no toca las reglas R de sizing/exposición):** `detect_base_breakout()` en `data/indicators.py` marca un base-breakout cuando, en tendencia (precio>EMA200 en pendiente +), el rango de los 20 días previos ≤ **5·ATR** (coil relativo a *su* volatilidad), el ATR está contraído, y hoy **cierra sobre el techo de la base** (ruptura fresca). `score_technical_setup` le suma **+2.0** (refuerzo moderado, elegido por el operador). Se expone también al prompt del analista técnico.
+
+> Cautelas: en ≥8 % ATR la muestra es **fina (~29 trades, 10 IS + 19 OOS)** — es coherente en ambas mitades pero no concluyente; tratar como refuerzo, no certeza. Sólido en <3 % ATR (muestra grande, aguanta OOS). Un solo universo (watchlist actual → sesgo de superviviente) y un régimen macro (alcista cripto/IA). Revisar con más historia/universo antes de subir el peso o convertirlo en gating.
+
 ---
 
 ## 4. Parámetros (implementados en `config.py` desde 2026-06-15)
