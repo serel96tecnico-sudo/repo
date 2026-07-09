@@ -104,8 +104,11 @@ def save_state(symbols):
     os.replace(tmp, STATE_FILE)
 
 
-def main():
-    report_path = Path(sys.argv[1]) if len(sys.argv) > 1 else find_latest_report()
+def main(report_arg=None):
+    # report_arg explícito (CLI) o autodetección. NO leer sys.argv aquí: cuando
+    # main.py hace `import draw_levels; draw_levels.main()`, sys.argv son los flags
+    # del pipeline (--session evening) y romperían la detección del report.
+    report_path = Path(report_arg) if report_arg else find_latest_report()
     if not report_path or not report_path.exists():
         print("No se encontró ningún report_*.json en output/.")
         return 1
@@ -180,4 +183,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else None))
