@@ -47,6 +47,8 @@ try:
 except Exception:
     pass
 
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import data.market_data  # noqa: F401  (aplica el parche SSL de yfinance como side-effect)
 import yfinance as yf
 
