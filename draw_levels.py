@@ -18,6 +18,7 @@ sale sin romper nada (la señal por Telegram no depende de esto).
 """
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -42,6 +43,24 @@ STATE_FILE = ROOT / "contex" / "tv_drawn_levels.json"
 TV_MCP_DIR = Path(os.getenv("TV_MCP_DIR", r"C:\Users\bucki\tradingview-mcp"))
 TV_CLI = TV_MCP_DIR / "src" / "cli" / "index.js"
 
+
+def _find_node():
+    """Resuelve el ejecutable de node. El Task Scheduler lanza con un PATH mínimo,
+    así que 'node' a secas puede no encontrarse aunque funcione en un shell normal
+    (este era el motivo de que el dibujado fallara solo en el run programado).
+    Buscamos en el PATH y, si no, en las rutas de instalación típicas de Windows."""
+    found = shutil.which("node")
+    if found:
+        return found
+    for p in (r"C:\Program Files\nodejs\node.exe",
+              r"C:\Program Files (x86)\nodejs\node.exe"):
+        if os.path.exists(p):
+            return p
+    return "node"  # último recurso; si de verdad falta, tv() lo reporta
+
+
+NODE_BIN = _find_node()
+
 MIN_SCORE = 6.0                       # solo BUY con composite_score >= esto
 BUY_RECOMMENDATIONS = {"BUY", "STRONG BUY"}
 DRAW_TARGETS = True                   # entrada+stop siempre; targets T1/T2 opcional
@@ -56,14 +75,15 @@ def tv(*args, timeout=30):
     """Ejecuta el CLI `tv` y devuelve el JSON parseado (o {} si falla)."""
     try:
         proc = subprocess.run(
-            ["node", str(TV_CLI), *args],
+            [NODE_BIN, str(TV_CLI), *args],
             cwd=str(TV_MCP_DIR),
             capture_output=True,
             text=True,
             timeout=timeout,
         )
     except FileNotFoundError:
-        raise RuntimeError("No se encontró 'node' en el PATH.")
+        raise RuntimeError(f"No se encontró node (probado: {NODE_BIN}). "
+                           "Instala Node.js o define su ruta.")
     except subprocess.TimeoutExpired:
         return {"success": False, "error": "timeout"}
     out = (proc.stdout or "").strip()

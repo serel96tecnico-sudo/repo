@@ -135,11 +135,19 @@ def main():
 
         # Marca en TradingView las recomendaciones BUY>=6 (no-fatal: si TV no está
         # abierto o el puente falla, avisa y sigue — la señal por Telegram no depende de esto).
+        # El resultado se LOGUEA (no solo print) para que un fallo en el run programado
+        # sea visible en trading_agent.log (stdout del scheduler no se captura).
+        from utils.logger import get_logger
+        _dl_log = get_logger("draw_levels")
         try:
             import draw_levels
-            draw_levels.main()
+            rc = draw_levels.main()
+            if rc == 0:
+                _dl_log.info("Niveles BUY>=6 dibujados en TradingView.")
+            else:
+                _dl_log.warning(f"No se dibujó (rc={rc}: 1=sin report, 2=TradingView no responde).")
         except Exception as e:
-            print(f"(draw_levels: no se pudieron dibujar las marcas en TradingView: {e})")
+            _dl_log.warning(f"Excepción al dibujar en TradingView: {e}")
 
 
 if __name__ == "__main__":
