@@ -105,6 +105,22 @@ def draw_line(price, style, text):
     )
 
 
+def current_price(ticker):
+    """Último precio del ticker vía el CLI `tv`. None si no se puede obtener
+    (en ese caso el guard hace fail-open: dibuja igualmente, no suprime por una
+    consulta fallida)."""
+    q = tv("quote", ticker)
+    if not q.get("success"):
+        return None
+    px = q.get("last")
+    if px is None:
+        px = q.get("close")
+    try:
+        return float(px)
+    except (TypeError, ValueError):
+        return None
+
+
 def find_latest_report():
     reports = sorted(OUTPUT_DIR.glob("report_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
     return reports[0] if reports else None
@@ -191,6 +207,7 @@ def main(report_arg=None):
 
     # 2) Dibuja los de hoy (limpiando antes cada uno para no acumular).
     drawn = []
+    skipped_invalid = []
     for c in picks:
         ticker = c["ticker"]
         rd = c.get("risk_data") or {}
@@ -204,6 +221,18 @@ def main(report_arg=None):
             print(f"  x {ticker}: no se pudo fijar el símbolo, salto.")
             continue
         tv("draw", "clear")
+
+        # Guard de validez: no dibujar setups que el precio ya invalidó. Son BUY
+        # (longs), así que si el último precio ya está en/por debajo del stop, el
+        # setup está muerto (caso OPEN 2026-07-10: recomendado a 5.41, stop 5.17,
+        # cotizando 5.04 al día siguiente). Dibujarlo engaña: parece vivo. Como el
+        # 'draw clear' de arriba ya corrió, el símbolo queda limpio y saltamos.
+        # fail-open: si no hay precio (quote falla), dibuja igualmente.
+        px = current_price(ticker)
+        if px is not None and stop is not None and px <= float(stop):
+            skipped_invalid.append(ticker)
+            print(f"  ⊘ {ticker}: precio {px} <= stop {stop} — setup invalidado, no se dibuja.")
+            continue
 
         if entry is not None:
             draw_line(entry, STYLE_ENTRY, f"ENTRADA {entry} [{ticker} {score}]")
@@ -224,7 +253,9 @@ def main(report_arg=None):
     if original_symbol:
         tv("symbol", original_symbol)
 
-    print(f"Hecho. Marcadas {len(drawn)} acciones en TradingView.")
+    print(f"Hecho. Marcadas {len(drawn)} acciones en TradingView."
+          + (f" Saltadas por invalidación (precio<=stop): {', '.join(skipped_invalid)}."
+             if skipped_invalid else ""))
     return 0
 
 
