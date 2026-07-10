@@ -16,6 +16,11 @@ def run_pipeline(session="morning"):
         report = orch.run_daily_pipeline()
         if report:
             logger.info(f"Completed ({session}). Report: {report.report_txt_path}")
+            # Marca en TradingView las recomendaciones BUY>=6. Este es el camino
+            # REAL de producción (servicio NSSM `main.py --schedule`): el bloque de
+            # dibujo de main.py NO se ejecuta aquí, así que hay que invocarlo. No-fatal.
+            import draw_levels
+            draw_levels.run_and_log(report.report_json_path)
         else:
             logger.info(f"No report generated ({session}) (market closed or no candidates).")
     except Exception as e:

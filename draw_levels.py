@@ -124,6 +124,32 @@ def save_state(symbols):
     os.replace(tmp, STATE_FILE)
 
 
+def run_and_log(report_arg=None):
+    """Ejecuta el dibujado y LOGUEA el resultado en trading_agent.log (no solo print).
+
+    Pensado para llamarse desde CUALQUIER entry point del pipeline: el run manual
+    (`python main.py`) y —sobre todo— el run programado, que corre como servicio
+    NSSM `main.py --schedule` → scheduler.run_pipeline → run_daily_pipeline y NUNCA
+    pasa por el bloque final de main(). Ese era el motivo real de que no se dibujara
+    en producción. No-fatal: una excepción aquí nunca debe tumbar el pipeline.
+    """
+    from utils.logger import get_logger
+    from config import LOGS_DIR
+    # LOGS_DIR es imprescindible: sin él get_logger solo añade handler de consola y
+    # el stdout del servicio NSSM no se captura → el resultado sería invisible.
+    log = get_logger("draw_levels", LOGS_DIR)
+    try:
+        rc = main(report_arg)
+        if rc == 0:
+            log.info("Niveles BUY>=6 dibujados en TradingView.")
+        else:
+            log.warning(f"No se dibujó (rc={rc}: 1=sin report, 2=TradingView no responde).")
+        return rc
+    except Exception as e:
+        log.warning(f"Excepción al dibujar en TradingView: {e}")
+        return -1
+
+
 def main(report_arg=None):
     # report_arg explícito (CLI) o autodetección. NO leer sys.argv aquí: cuando
     # main.py hace `import draw_levels; draw_levels.main()`, sys.argv son los flags

@@ -133,21 +133,11 @@ def main():
         for fc in report.candidates[:5]:
             print(f"  #{fc.rank} {fc.ticker} — {fc.recommendation} (score: {fc.composite_score:.1f})")
 
-        # Marca en TradingView las recomendaciones BUY>=6 (no-fatal: si TV no está
-        # abierto o el puente falla, avisa y sigue — la señal por Telegram no depende de esto).
-        # El resultado se LOGUEA (no solo print) para que un fallo en el run programado
-        # sea visible en trading_agent.log (stdout del scheduler no se captura).
-        from utils.logger import get_logger
-        _dl_log = get_logger("draw_levels")
-        try:
-            import draw_levels
-            rc = draw_levels.main()
-            if rc == 0:
-                _dl_log.info("Niveles BUY>=6 dibujados en TradingView.")
-            else:
-                _dl_log.warning(f"No se dibujó (rc={rc}: 1=sin report, 2=TradingView no responde).")
-        except Exception as e:
-            _dl_log.warning(f"Excepción al dibujar en TradingView: {e}")
+        # Marca en TradingView las recomendaciones BUY>=6 (no-fatal). Mismo helper
+        # que usa el run programado (scheduler.run_pipeline), que es el camino real
+        # de producción. Aquí cubre el run manual `python main.py --session ...`.
+        import draw_levels
+        draw_levels.run_and_log(report.report_json_path)
 
 
 if __name__ == "__main__":
