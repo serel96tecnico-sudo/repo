@@ -75,9 +75,41 @@ GAPPERS_SHORT_FILTERS = {
 }
 
 
+# ------------------------------------------------------------------
+# Finviz auth (opcional). Inyecta la cookie de sesión (Elite/logueada)
+# en la Session global de finvizfinance para evitar el rate-limiting del
+# scraping anónimo — la causa de los 'NoneType ... find_all'. El valor lo
+# pone el usuario en .env (FINVIZ_AUTH_COOKIE); el código solo lo lee y
+# NUNCA lo registra en el log.
+# ------------------------------------------------------------------
+_FINVIZ_AUTH_APPLIED = False
+
+
+def _apply_finviz_auth(logger=None) -> bool:
+    """Aplica FINVIZ_AUTH_COOKIE a la sesión de finvizfinance una sola vez."""
+    global _FINVIZ_AUTH_APPLIED
+    if _FINVIZ_AUTH_APPLIED:
+        return True
+    cookie = os.getenv("FINVIZ_AUTH_COOKIE", "").strip()
+    if not cookie:
+        return False
+    try:
+        import finvizfinance.util as fv_util
+        fv_util.session.headers.update({"Cookie": cookie})
+        _FINVIZ_AUTH_APPLIED = True
+        if logger:
+            logger.info("Finviz: sesión autenticada vía FINVIZ_AUTH_COOKIE")
+        return True
+    except Exception as e:
+        if logger:
+            logger.warning(f"Finviz: no se pudo aplicar la cookie de auth — {e}")
+        return False
+
+
 class FundamentalAnalyst(BaseAgent):
     def __init__(self, client):
         super().__init__(client)
+        _apply_finviz_auth(self.logger)
 
     def run(self, scan_candidates: list, session: str = "morning") -> tuple:
         """
