@@ -25,7 +25,7 @@ SHORT_SCREENER_FILTERS = {
     "Average Volume": "Over 500K",
     "Country": "USA",
     "Float Short": "Over 10%",
-    "Performance (Week)": "Down",
+    "Performance": "Week Down",
     "Price": "Over $5",
 }
 # TA screeners — cribado en timeframe semanal/mensual para descubrir nuevos candidatos
@@ -36,9 +36,9 @@ TA_WEEKLY_LONG_FILTERS = {
     "20-Day Simple Moving Average": "Price above SMA20",
     "50-Day Simple Moving Average": "Price above SMA50",
     "200-Day Simple Moving Average": "Price above SMA200",
-    "Performance (Week)": "Up",
-    "Performance (Month)": "Up",
-    "RSI (14)": "Not Overbought (60)",
+    "Performance": "Week Up",
+    "Performance 2": "Month Up",
+    "RSI (14)": "Not Overbought (<60)",
 }
 TA_MONTHLY_BREAKOUT_FILTERS = {
     "Average Volume": "Over 500K",
@@ -46,8 +46,8 @@ TA_MONTHLY_BREAKOUT_FILTERS = {
     "Price": "Over $5",
     "52-Week High/Low": "0-10% below High",
     "200-Day Simple Moving Average": "Price above SMA200",
-    "Performance (Quarter)": "Up",
-    "Performance (Half Year)": "Up",
+    "Performance": "Quarter Up",
+    "Performance 2": "Half Up",
     "Relative Volume": "Over 1",
 }
 # Gappers — descubrimiento DIARIO de valores que se disparan HOY por noticia/evento.
