@@ -237,15 +237,16 @@ class FundamentalAnalyst(BaseAgent):
         return data, False
 
     def _finviz_with_retry(self, ticker: str, attempts: int = 3) -> dict:
-        """Llama a Finviz con reintentos + backoff. Devuelve {} si todos fallan.
+        """Scrapea Finviz con reintentos + backoff. Devuelve {} si todos fallan.
 
-        El rate-limiting de Finviz es transitorio: un backoff creciente suele
-        resolverlo en el 2º/3er intento sin hundir el resto del run.
+        Un error de red es transitorio: un backoff creciente suele resolverlo en
+        el 2º/3er intento. Si la página llega bien pero no tiene tablas (ticker
+        inválido/página de bloqueo), _scrape_finviz_quote devuelve {} sin excepción
+        y no reintentamos.
         """
-        from finvizfinance.quote import finvizfinance
         for i in range(attempts):
             try:
-                return finvizfinance(ticker).ticker_fundament()
+                return self._scrape_finviz_quote(ticker)
             except Exception as e:
                 if i < attempts - 1:
                     wait = 1.5 * (i + 1)
@@ -259,6 +260,47 @@ class FundamentalAnalyst(BaseAgent):
                         f"  {ticker}: Finviz falló tras {attempts} intentos — {e}"
                     )
         return {}
+
+    def _scrape_finviz_quote(self, ticker: str) -> dict:
+        """Parsea la página de cotización de Finviz sin depender de
+        finvizfinance.ticker_fundament().
+
+        Finviz cambió el layout (jul-2026): eliminó el `div.quote-links` en el
+        que la librería 1.3.0 revienta ('NoneType ... find_all'), y partió la
+        rejilla de datos en VARIAS tablas `snapshot-table2`. Aquí las combinamos
+        todas en un único dict label->valor, que es la forma que espera
+        `_build_result`. Reutiliza la sesión de finvizfinance (con la cookie de
+        FINVIZ_AUTH_COOKIE si está) y su config de UA/proxy/timeout.
+        """
+        import finvizfinance.util as fv_util
+        from bs4 import BeautifulSoup
+
+        r = fv_util.session.get(
+            "https://finviz.com/quote.ashx",
+            params={"t": ticker, "p": "d"},
+            headers=fv_util.headers,
+            timeout=fv_util.timeout_value,
+            proxies=fv_util.proxy_dict,
+        )
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "lxml")
+
+        tables = soup.find_all("table", class_="snapshot-table2")
+        if not tables:
+            return {}  # ticker inválido o página inesperada — no reintentar
+
+        data = {}
+        for table in tables:
+            cells = table.find_all("td")
+            for j in range(0, len(cells) - 1, 2):
+                key = cells[j].get_text(strip=True)
+                if key:
+                    data[key] = cells[j + 1].get_text(strip=True)
+
+        company = soup.find("h2", class_="quote-header_ticker-wrapper_company")
+        if company:
+            data["Company"] = company.get_text(strip=True)
+        return data
 
     # ------------------------------------------------------------------
     # Scoring
