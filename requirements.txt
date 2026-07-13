@@ -15,3 +15,6 @@ finvizfinance>=0.14.0
 alpaca-py>=0.20.0
 tradingview-ta>=3.3.0
 truststore>=0.10.0
+# Informe de track record (scripts/generate_performance_report.py)
+matplotlib>=3.8.0
+reportlab>=4.0.0

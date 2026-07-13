@@ -121,8 +121,29 @@ def load_trades(path: str) -> list[dict]:
     trades.sort(key=lambda x: x["fecha"])
     return trades
 
+
+# 1 USD = 0,92 € (para la base de capital combinada)
+USD_TO_EUR = 0.92
+
+
+def load_capital_base(path: str) -> float | None:
+    """Capital operativo = Broker 1 (EUR) + Broker 2 (USD->EUR), leído de
+    portfolio.json. Devuelve None si el fichero no trae balances de broker
+    (p.ej. trades_historico.json), en cuyo caso el % de DD cae al método viejo.
+    """
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return None
+        b = data.get("brokers", {})
+        base = (b.get("broker_1", {}).get("cuenta_completa_eur", 0.0)
+                + b.get("broker_2", {}).get("balance_usd", 0.0) * USD_TO_EUR)
+        return base if base > 0 else None
+    except Exception:
+        return None
+
 # ── Métricas ─────────────────────────────────────────────────────────────────
-def compute_metrics(trades: list[dict]) -> dict:
+def compute_metrics(trades: list[dict], capital_base: float | None = None) -> dict:
     if not trades:
         return {}
 
@@ -149,7 +170,15 @@ def compute_metrics(trades: list[dict]) -> dict:
     peak   = np.maximum.accumulate(equity)
     dd     = equity - peak
     max_dd = float(np.min(dd))
-    max_dd_pct = (max_dd / peak[np.argmin(dd)]) * 100 if peak[np.argmin(dd)] != 0 else 0
+    # % de drawdown sobre el CAPITAL OPERATIVO (si se conoce). El método viejo
+    # dividía por el pico de la curva de P&L (que arranca en ~0), lo que producía
+    # porcentajes disparatados (p.ej. -135%). Fallback al método viejo solo si no
+    # hay base de capital disponible.
+    if capital_base and capital_base > 0:
+        max_dd_pct = max_dd / capital_base * 100
+    else:
+        denom = peak[np.argmin(dd)]
+        max_dd_pct = (max_dd / denom) * 100 if denom != 0 else 0.0
 
     # Por mes
     monthly: dict[str, list[float]] = defaultdict(list)
@@ -438,7 +467,7 @@ def recent_trades_table(trades: list[dict], n: int = 15) -> Table:
 # ── BUILD PDF ─────────────────────────────────────────────────────────────────
 def build(trades_path: str, output_path: str):
     trades  = load_trades(trades_path)
-    m       = compute_metrics(trades)
+    m       = compute_metrics(trades, capital_base=load_capital_base(trades_path))
     monthly = m["monthly"]
 
     os.makedirs("output", exist_ok=True)
