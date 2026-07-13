@@ -180,9 +180,22 @@ class FundamentalAnalyst(BaseAgent):
                 self.logger.debug(f"  {ticker}: caché OK ({entry.get('updated', '')[:10]})")
                 return entry["data"], True
 
-        # Fetch fresco desde Finviz
-        from finvizfinance.quote import finvizfinance
-        data = finvizfinance(ticker).ticker_fundament()
+        # Fetch fresco desde Finviz — con reintentos por rate-limiting intermitente.
+        # Finviz sirve páginas de bloqueo puntuales bajo carga: la lib revienta con
+        # "'NoneType' object has no attribute 'find_all'" al no encontrar la tabla.
+        data = self._finviz_with_retry(ticker)
+
+        if not data:
+            # Fetch agotado: degrada a caché rancia si existe. Mejor un fundamental
+            # algo viejo que perder el score del ticker en todo el run.
+            if entry and entry.get("data"):
+                self.logger.warning(
+                    f"  {ticker}: Finviz no disponible, uso caché rancia "
+                    f"({entry.get('updated', '')[:10]})"
+                )
+                return entry["data"], True
+            return {}, False
+
         earnings_str = data.get("Earnings", "-") or "-"
         data["_earnings_days"] = self._parse_earnings_days(earnings_str)
         self._cache.setdefault("tickers", {})[ticker] = {
@@ -190,6 +203,30 @@ class FundamentalAnalyst(BaseAgent):
             "data": data,
         }
         return data, False
+
+    def _finviz_with_retry(self, ticker: str, attempts: int = 3) -> dict:
+        """Llama a Finviz con reintentos + backoff. Devuelve {} si todos fallan.
+
+        El rate-limiting de Finviz es transitorio: un backoff creciente suele
+        resolverlo en el 2º/3er intento sin hundir el resto del run.
+        """
+        from finvizfinance.quote import finvizfinance
+        for i in range(attempts):
+            try:
+                return finvizfinance(ticker).ticker_fundament()
+            except Exception as e:
+                if i < attempts - 1:
+                    wait = 1.5 * (i + 1)
+                    self.logger.debug(
+                        f"  {ticker}: reintento Finviz {i + 1}/{attempts} "
+                        f"tras error ({e}); espero {wait:.1f}s"
+                    )
+                    time.sleep(wait)
+                else:
+                    self.logger.warning(
+                        f"  {ticker}: Finviz falló tras {attempts} intentos — {e}"
+                    )
+        return {}
 
     # ------------------------------------------------------------------
     # Scoring
