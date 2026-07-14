@@ -1,10 +1,12 @@
 """
 Genera el PDF de track record de performance de trading.
-Lee trades de contex/portfolio.json (cerradas_semana) y genera metricas completas.
+Lee trades de contex/portfolio.json (cerradas_semana) — el log VIVO de cierres,
+que es donde se registran las operaciones (trades_historico.json quedó congelado
+el 2026-06-10 cuando /cerrar dejó de escribirlo). Genera metricas completas.
 
 Uso:
     python scripts/generate_performance_report.py
-    python scripts/generate_performance_report.py --trades contex/trades_historico.json
+    python scripts/generate_performance_report.py --trades contex/trades_historico.json  # log viejo
 """
 import argparse
 import io
@@ -629,8 +631,9 @@ def build(trades_path: str, output_path: str, portfolio_path: str = "contex/port
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--trades",  default="contex/trades_historico.json",
-                        help="JSON con los trades (default: contex/trades_historico.json)")
+    parser.add_argument("--trades",  default="contex/portfolio.json",
+                        help="JSON con los trades (default: contex/portfolio.json → cerradas_semana, "
+                             "el log vivo; trades_historico.json quedó congelado el 10-jun)")
     parser.add_argument("--output",  default="output/track_record.pdf",
                         help="Ruta del PDF de salida")
     parser.add_argument("--portfolio", default="contex/portfolio.json",
