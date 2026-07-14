@@ -10,11 +10,11 @@ from config import (
     SCORE_WEIGHTS, FINAL_REPORT_N, US_MARKET_HOLIDAYS_2026,
     TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
     PORTFOLIO_VALUE, SUBTHEME_MAX_PCT, PORTFOLIO_RISK_CAP_PCT,
-    SHORT_EXTENDED_ATR_MAX,
+    SHORT_EXTENDED_ATR_MAX, RECENT_LOSS_COOLDOWN_DAYS,
 )
 from utils.risk_policy import (
     build_tier_map, classify_tier, high_beta_cap, is_high_beta, is_explicitly_classified,
-    open_position_risk,
+    open_position_risk, recent_loss_cooldown,
 )
 from agents.market_scanner import MarketScanner
 from agents.fundamental_analyst import FundamentalAnalyst
@@ -137,6 +137,7 @@ class TradingOrchestrator:
 
         ta_map = {t.ticker: t for t in ta_results}
         final_candidates = self._merge_and_rank(risk_results, ta_map, sentiment_map, scan_result, fund_map)
+        final_candidates = self._apply_recent_loss_cooldown(final_candidates, portfolio)
         final_candidates = self._apply_exposure_caps(
             final_candidates, tier_map, portfolio, market_conditions
         )
@@ -421,6 +422,43 @@ class TradingOrchestrator:
 
             risk_used += new_risk  # aceptada → consume riesgo agregado (R6)
 
+        return final
+
+    def _apply_recent_loss_cooldown(self, final, portfolio) -> list:
+        """R7 — Enfriamiento de re-entrada tras pérdida reciente.
+
+        Degrada a WATCH cualquier BUY/STRONG BUY o SELL/STRONG SELL cuyo ticker
+        cerró en pérdida (> umbral) en los últimos RECENT_LOSS_COOLDOWN_DAYS días,
+        SI la dirección coincide (o si el cierre perdedor no registró dirección).
+        Un stop reciente que se re-recomienda a los pocos días es el patrón que más
+        pérdidas repite (análisis de selección jul-2026). No toca los WATCH.
+        """
+        if not final or not portfolio:
+            return final
+
+        cooldown = recent_loss_cooldown(portfolio)
+        if not cooldown:
+            return final
+
+        self.logger.info(
+            f"R7 enfriamiento (≤{RECENT_LOSS_COOLDOWN_DAYS}d): "
+            f"{', '.join(f'{t}({d['direction'] or 'any'},{d['days_ago']}d,{d['pl']:+.0f})' for t, d in cooldown.items())}"
+        )
+
+        for fc in final:
+            if fc.recommendation not in ("BUY", "STRONG BUY", "SELL", "STRONG SELL"):
+                continue
+            entry = cooldown.get(fc.ticker.upper())
+            if not entry:
+                continue
+            cand_dir = "short" if fc.recommendation in ("SELL", "STRONG SELL") else "long"
+            # Veta si el cierre perdedor fue en la misma dirección, o si no la trae.
+            if entry["direction"] in (None, cand_dir):
+                self._demote(
+                    fc,
+                    f"R7 enfriamiento: {fc.ticker} cerró {entry['pl']:+.0f} "
+                    f"hace {entry['days_ago']}d (< {RECENT_LOSS_COOLDOWN_DAYS}d)"
+                )
         return final
 
     def _demote(self, fc, reason: str):

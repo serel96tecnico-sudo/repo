@@ -18,12 +18,15 @@ clasifican por capitalización (fallback): >=100B → A, >=15B → B, resto → 
 Conviene revisarla periódicamente (§5 falsabilidad).
 """
 
+from datetime import date, datetime
+
 from config import (
     HIGH_BETA_CAP_STRONG_UP, HIGH_BETA_CAP_UPTREND,
     HIGH_BETA_CAP_NEUTRAL, HIGH_BETA_CAP_RISKOFF,
     RISK_PCT_STRONG_UP, RISK_PCT_UPTREND,
     RISK_PCT_NEUTRAL, RISK_PCT_RISKOFF,
     DEFAULT_STOP_PCT, MIN_INVEST_PER_TRADE, MAX_INVEST_PER_TRADE,
+    RECENT_LOSS_COOLDOWN_DAYS, RECENT_LOSS_MIN_ABS,
 )
 
 # ── Tier A — núcleo, beta baja/media (large-caps establecidos) ────────────────
@@ -193,6 +196,64 @@ def open_position_risk(portfolio) -> float:
         if rps > 0:
             total += rps * qty
     return round(total, 2)
+
+
+def _trade_net_pl(t: dict) -> float:
+    """P&L neto de un cierre, en la moneda que traiga (prioriza neto sobre bruto)."""
+    for k in ("net_pl_eur", "net_pl_usd", "gross_pl_eur", "gross_pl_usd", "pl"):
+        v = t.get(k)
+        if v is not None:
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                continue
+    return 0.0
+
+
+def recent_loss_cooldown(portfolio: dict, today=None,
+                         window_days: int = RECENT_LOSS_COOLDOWN_DAYS,
+                         min_abs: float = RECENT_LOSS_MIN_ABS) -> dict:
+    """R7 — Tickers que cerraron en PÉRDIDA (> min_abs) en los últimos `window_days`
+    días de calendario. Fuente: portfolio.json['cerradas_semana'].
+
+    Devuelve {TICKER: {"direction": "long"|"short"|None, "days_ago": int,
+    "pl": float, "fecha": "YYYY-MM-DD"}} con el cierre perdedor MÁS RECIENTE por
+    ticker. `direction` None cuando el registro no la trae (cierres antiguos): en
+    ese caso el veto se aplica a cualquier dirección (conservador).
+
+    Sirve para vetar la re-entrada en la misma dirección: un nombre recién stopeado
+    que se vuelve a recomendar a los pocos días es el patrón que más pérdidas repite
+    (análisis de selección jul-2026: GRAB ×3, MRVL, INTC).
+    """
+    if not portfolio:
+        return {}
+    ref = today or date.today()
+    if isinstance(ref, datetime):
+        ref = ref.date()
+
+    out: dict = {}
+    for t in portfolio.get("cerradas_semana", []):
+        pl = _trade_net_pl(t)
+        if pl >= 0 or abs(pl) < min_abs:
+            continue  # ganador o scratch → no enfría
+        fecha_str = (t.get("fecha_cierre") or t.get("fecha") or "")[:10]
+        try:
+            fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        days_ago = (ref - fecha).days
+        if days_ago < 0 or days_ago > window_days:
+            continue
+        tkr = (t.get("ticker") or "").upper()
+        if not tkr:
+            continue
+        direccion = (t.get("direccion") or "").lower()
+        direction = direccion if direccion in ("long", "short") else None
+        prev = out.get(tkr)
+        if prev is None or days_ago < prev["days_ago"]:
+            out[tkr] = {"direction": direction, "days_ago": days_ago,
+                        "pl": round(pl, 2), "fecha": fecha_str}
+    return out
 
 
 def build_tier_map(candidates) -> dict:

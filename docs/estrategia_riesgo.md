@@ -84,6 +84,15 @@ La suma del **riesgo abierto** (posiciones existentes + nuevas) no puede superar
 >
 > **Riesgo de una posición** = `(precio − stop) × acciones` (longs) / `(stop − precio) × acciones` (cortos). Si una posición **no tiene stop colocado**, se asume un stop por defecto a `DEFAULT_STOP_PCT` (8 %) — opción del operador: contar el riesgo real, no ignorarlo. Una posición en verde con el stop ya sobre el precio aporta riesgo 0.
 
+### R7 — Enfriamiento de re-entrada tras pérdida reciente (nueva 2026-07-14)
+Si un ticker **cerró en pérdida** (neto > `RECENT_LOSS_MIN_ABS`, para no contar scratch) en los últimos **`RECENT_LOSS_COOLDOWN_DAYS` días** de calendario, no se re-recomienda en la **misma dirección**: queda WATCH-only. Se aplica en `orchestrator._apply_recent_loss_cooldown` (antes de R1/R2/R6), con la lista de cierres de `portfolio.json['cerradas_semana']` vía `recent_loss_cooldown()`.
+
+> **Motivación (análisis de selección jul-2026).** Sobre 3 semanas de recomendaciones, el motor re-recomendaba una y otra vez nombres que acababan de stopear —GRAB ×3, MRVL, INTC, todos perdedores— sin memoria de que el setup acababa de fallar. El `composite_score` **no** discriminaba ganadores de perdedores (7.01 vs 6.90 de media), así que el problema no era el ranking sino la ausencia de un veto de re-entrada. Dar al nombre unos días para "resetear" ataca ese patrón directamente.
+>
+> **Dirección.** Un largo perdedor veta nuevos **largos** de ese ticker; un corto perdedor veta nuevos **cortos**. Un cierre sin dirección registrada (registros antiguos con `direccion: "?"`) veta **cualquier** dirección (conservador).
+>
+> **Cautelas (§7).** Muestra pequeña (13 trades resueltos) y nombres repetidos que pesan mucho (MRVL/GRAB). Es un **prototipo**: la ventana (5 días) y el umbral (€10) son la primera aproximación del operador, pendientes de calibrar con más datos. No usa aún el precio forward — solo el hecho del cierre perdedor.
+
 ### R4 — Cortos (sin cambios estructurales)
 Los cortos realizados funcionaron (6/7 ganadores, +207). Se mantienen las reglas vigentes: solo Broker 2, gated por régimen (no abrir en *Strong Uptrend*), entrada en pullback a EMA9. Esta spec no los modifica.
 
@@ -151,6 +160,10 @@ MAX_INVEST_PER_TRADE      = 800
 # R6 — Tope de riesgo agregado de cartera + stop por defecto sin SL colocado
 PORTFOLIO_RISK_CAP_PCT    = 0.10
 DEFAULT_STOP_PCT          = 0.08
+
+# R7 — Enfriamiento de re-entrada tras pérdida reciente
+RECENT_LOSS_COOLDOWN_DAYS = 5
+RECENT_LOSS_MIN_ABS       = 10.0
 ```
 
 > Estos valores viven aquí como **decisión** y están replicados en `config.py`. La clasificación de tiers (§2) y sub-temas vive en `utils/risk_policy.py` como **semilla editable**: los nombres no listados se clasifican por capitalización (>=100B→A, >=15B→B, resto→C/otros). Conviene revisar la taxonomía periódicamente (§5).

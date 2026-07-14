@@ -2,14 +2,17 @@
 
 from dataclasses import dataclass
 
+from datetime import date
+
 from utils.risk_policy import (
     classify_tier, is_high_beta, high_beta_cap, risk_pct_for_regime, open_position_risk,
-    size_position,
+    size_position, recent_loss_cooldown,
 )
 from config import (
     HIGH_BETA_CAP_STRONG_UP, HIGH_BETA_CAP_NEUTRAL, HIGH_BETA_CAP_RISKOFF,
     RISK_PCT_STRONG_UP, RISK_PCT_UPTREND, RISK_PCT_NEUTRAL, RISK_PCT_RISKOFF,
     DEFAULT_STOP_PCT, MIN_INVEST_PER_TRADE, MAX_INVEST_PER_TRADE,
+    RECENT_LOSS_MIN_ABS,
 )
 
 
@@ -176,3 +179,58 @@ def test_band_capital_ceiling_caps_cheap_stock():
 def test_band_invalid_inputs():
     assert size_position(140, 0, 50.0, CAP) == 0
     assert size_position(140, 10.0, 0, CAP) == 0
+
+
+# ── R7 — enfriamiento de re-entrada tras pérdida reciente ─────────────────────
+
+REF = date(2026, 7, 14)
+
+
+def _pf(cerradas):
+    return {"cerradas_semana": cerradas}
+
+
+def test_cooldown_recent_loss_flags_ticker():
+    pf = _pf([{"ticker": "GRAB", "direccion": "long", "net_pl_eur": -50.0,
+               "fecha_cierre": "2026-07-13"}])
+    cd = recent_loss_cooldown(pf, today=REF, window_days=5)
+    assert "GRAB" in cd
+    assert cd["GRAB"]["direction"] == "long"
+    assert cd["GRAB"]["days_ago"] == 1
+
+
+def test_cooldown_ignores_winners():
+    pf = _pf([{"ticker": "HIMS", "direccion": "long", "net_pl_eur": 80.0,
+               "fecha_cierre": "2026-07-13"}])
+    assert recent_loss_cooldown(pf, today=REF, window_days=5) == {}
+
+
+def test_cooldown_ignores_scratch_losses():
+    # pérdida por debajo del umbral (scratch) no enfría
+    pf = _pf([{"ticker": "NU", "direccion": "long",
+               "net_pl_eur": -(RECENT_LOSS_MIN_ABS - 1),
+               "fecha_cierre": "2026-07-13"}])
+    assert recent_loss_cooldown(pf, today=REF, window_days=5) == {}
+
+
+def test_cooldown_expires_outside_window():
+    pf = _pf([{"ticker": "MRVL", "direccion": "long", "net_pl_eur": -100.0,
+               "fecha_cierre": "2026-07-01"}])  # 13 días antes
+    assert recent_loss_cooldown(pf, today=REF, window_days=5) == {}
+
+
+def test_cooldown_keeps_most_recent_per_ticker():
+    pf = _pf([
+        {"ticker": "GRAB", "direccion": "long", "net_pl_eur": -50.0, "fecha_cierre": "2026-07-10"},
+        {"ticker": "GRAB", "direccion": "long", "net_pl_eur": -30.0, "fecha_cierre": "2026-07-13"},
+    ])
+    cd = recent_loss_cooldown(pf, today=REF, window_days=5)
+    assert cd["GRAB"]["days_ago"] == 1
+    assert cd["GRAB"]["pl"] == -30.0
+
+
+def test_cooldown_unknown_direction_is_none():
+    pf = _pf([{"ticker": "CIFR", "direccion": "?", "net_pl_eur": -160.0,
+               "fecha_cierre": "2026-07-13"}])
+    cd = recent_loss_cooldown(pf, today=REF, window_days=5)
+    assert cd["CIFR"]["direction"] is None

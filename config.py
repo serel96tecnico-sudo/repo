@@ -126,6 +126,17 @@ PORTFOLIO_RISK_CAP_PCT = 0.10   # €700 sobre 7k
 # asumir este % por debajo del precio). Fuerza a contar el riesgo real, no a ignorarlo.
 DEFAULT_STOP_PCT = 0.08
 
+# R7 (nueva 2026-07-14) — Enfriamiento de re-entrada tras pérdida reciente.
+# El análisis de calidad de selección (jul-2026, 3 semanas) mostró que el motor
+# re-recomienda una y otra vez nombres que acaban de stopear (GRAB ×3, MRVL, INTC:
+# todos perdedores), sin memoria de que el nombre acaba de fallar. Si un ticker
+# cerró en PÉRDIDA en los últimos N días de calendario, no se re-recomienda en la
+# MISMA dirección (queda WATCH-only): deja que el setup "resetee" antes de reintentar.
+# Un cierre perdedor por debajo de este umbral (scratch) NO dispara el enfriamiento.
+# Aplicado en orchestrator._apply_recent_loss_cooldown (utils.risk_policy.recent_loss_cooldown).
+RECENT_LOSS_COOLDOWN_DAYS = 5
+RECENT_LOSS_MIN_ABS = 10.0   # pérdida neta mín. (€/$ abs.) para contar como "stop real"
+
 # ── R5 — Calidad de entrada ("exigir fuerza, no comprar debilidad") ──────────
 # Calibrado con backtest_entry_quality.py (83 recs largas, 06/05-15/06):
 # lo que abre en rojo y salta por stop NO es la extensión sino la DEBILIDAD —
