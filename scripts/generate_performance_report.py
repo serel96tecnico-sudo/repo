@@ -465,9 +465,13 @@ def recent_trades_table(trades: list[dict], n: int = 15) -> Table:
     return t
 
 # ── BUILD PDF ─────────────────────────────────────────────────────────────────
-def build(trades_path: str, output_path: str):
+def build(trades_path: str, output_path: str, portfolio_path: str = "contex/portfolio.json"):
     trades  = load_trades(trades_path)
-    m       = compute_metrics(trades, capital_base=load_capital_base(trades_path))
+    # El capital operativo SIEMPRE sale de portfolio.json (balances de broker),
+    # independientemente de qué fichero de trades se use para el histórico —
+    # trades_historico.json no trae balances y devolvería None (fallback al
+    # método viejo) si se le pidiera capital_base a él.
+    m       = compute_metrics(trades, capital_base=load_capital_base(portfolio_path))
     monthly = m["monthly"]
 
     os.makedirs("output", exist_ok=True)
@@ -626,8 +630,11 @@ def build(trades_path: str, output_path: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--trades",  default="contex/trades_historico.json",
-                        help="JSON con los trades (default: contex/portfolio.json)")
+                        help="JSON con los trades (default: contex/trades_historico.json)")
     parser.add_argument("--output",  default="output/track_record.pdf",
                         help="Ruta del PDF de salida")
+    parser.add_argument("--portfolio", default="contex/portfolio.json",
+                        help="JSON con los balances de broker para el capital operativo "
+                             "(default: contex/portfolio.json)")
     args = parser.parse_args()
-    build(args.trades, args.output)
+    build(args.trades, args.output, args.portfolio)
