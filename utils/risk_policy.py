@@ -27,7 +27,11 @@ from config import (
     RISK_PCT_NEUTRAL, RISK_PCT_RISKOFF,
     DEFAULT_STOP_PCT, MIN_INVEST_PER_TRADE, MAX_INVEST_PER_TRADE,
     RECENT_LOSS_COOLDOWN_DAYS, RECENT_LOSS_MIN_ABS,
+    LOGS_DIR,
 )
+from utils.logger import get_logger
+
+logger = get_logger("RiskPolicy", LOGS_DIR)
 
 # ── Tier A — núcleo, beta baja/media (large-caps establecidos) ────────────────
 TIER_A = {
@@ -233,6 +237,9 @@ def recent_loss_cooldown(portfolio: dict, today=None,
 
     out: dict = {}
     for t in portfolio.get("cerradas_semana", []):
+        if not isinstance(t, dict):
+            logger.warning(f"recent_loss_cooldown: entrada malformada en cerradas_semana ignorada: {t!r}")
+            continue
         pl = _trade_net_pl(t)
         if pl >= 0 or abs(pl) < min_abs:
             continue  # ganador o scratch → no enfría
