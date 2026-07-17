@@ -134,7 +134,10 @@ def test_scanner_with_mock_client(tmp_dirs):
 
     client = make_mock_client()
 
-    with patch("data.market_data.yf") as mock_yf:
+    # CONTEXT_DIR redirigido a tmp: scanner.run() escribe la lista de seguimiento
+    # en portfolio.json, y sin este patch el test muta el fichero real del operador.
+    with patch("data.market_data.yf") as mock_yf, \
+         patch("config.CONTEXT_DIR", tmp_dirs / "contex"):
         mock_df = make_ohlcv(30)
         mock_yf.download.return_value = _make_batch_df(list(MOCK_QUOTES.keys()))
         mock_yf.Ticker.return_value.history.return_value = mock_df

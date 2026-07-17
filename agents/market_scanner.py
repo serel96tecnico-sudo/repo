@@ -4,13 +4,52 @@ from datetime import datetime
 
 import anthropic
 
+import config
 from agents.base_agent import BaseAgent
 from config import (
     MIN_PRICE, MAX_PRICE, MIN_AVG_VOLUME, MIN_MARKET_CAP,
     VOLUME_SPIKE_THRESHOLD, NEAR_52W_HIGH_PCT, SCAN_MAX_CANDIDATES, TA_TOP_N,
+    SEGUIMIENTO_MAX_AGE_DAYS,
 )
 from data.market_data import MarketDataFetcher
 from models.schemas import MarketConditions, ScanCandidate, ScanResult
+
+
+def _held_gp_pct(p: dict) -> str:
+    """G/P actual de una posición, en %. portfolio.json trae dos formatos según
+    broker: broker_1 escribe gp_potencial_pct; broker_2 solo net_pl_usd + bep_usd."""
+    pct = p.get("gp_potencial_pct")
+    if pct is None:
+        net = p.get("net_pl_usd")
+        bep = p.get("bep_usd") or p.get("bep_eur")
+        qty = p.get("cantidad") or 0
+        if net is not None and bep and qty:
+            pct = net / (bep * qty) * 100
+    return f"{pct:+.1f}%" if pct is not None else "?"
+
+
+def _unrealized_pl(portfolio: dict) -> str:
+    """P&L no realizado agregado, leído de `brokers` (cada broker en su moneda)."""
+    brokers = portfolio.get("brokers", {})
+    b1 = brokers.get("broker_1", {}).get("total_bp_eur")
+    b2 = brokers.get("broker_2", {}).get("open_net_pl_usd")
+    parts = []
+    if b1 is not None:
+        parts.append(f"broker 1 €{b1:+.2f}")
+    if b2 is not None:
+        parts.append(f"broker 2 ${b2:+.2f}")
+    return ", ".join(parts) if parts else "?"
+
+
+def _entry_age_days(entry: dict, now: datetime):
+    """Antigüedad en días de una entrada de seguimiento, o None si no se puede datar."""
+    raw = entry.get("fecha_añadido")
+    if not raw:
+        return None
+    try:
+        return (now - datetime.strptime(raw, "%Y-%m-%d")).days
+    except (ValueError, TypeError):
+        return None
 
 
 SCANNER_SYSTEM = """You are a professional swing trading analyst. Your job is to prioritize a list of stock scan candidates for further analysis.
@@ -56,6 +95,21 @@ class MarketScanner(BaseAgent):
         self.logger.info(f"Downloading quotes for {len(universe)} tickers...")
         quotes = self.data_fetcher.fetch_batch_quotes(universe)
 
+        # avg_vol_20d de Alpaca es feed IEX (~2% de cuota real) — comparado contra
+        # MIN_AVG_VOLUME sin corregir, el umbral efectivo era ~50x más exigente de
+        # lo que dice la config (ver fetch_consolidated_avg_volume). Se obtiene el
+        # volumen consolidado real solo para el filtro de liquidez.
+        self.logger.info(f"Checking real (consolidated) liquidity for {len(quotes)} tickers...")
+        real_avg_vol = self.data_fetcher.fetch_consolidated_avg_volume(list(quotes.keys()))
+        missing = [t for t in quotes if t not in real_avg_vol]
+        if missing:
+            self.logger.warning(
+                f"No consolidated volume for {len(missing)} tickers "
+                f"(liquidity filter assumes liquid): {missing}"
+            )
+        for ticker, vol in real_avg_vol.items():
+            quotes[ticker]["avg_vol_20d_real"] = vol
+
         candidates = self._apply_basic_filters(quotes)
         self.logger.info(f"After filters: {len(candidates)} candidates")
 
@@ -100,7 +154,7 @@ class MarketScanner(BaseAgent):
         candidates = []
         for ticker, q in quotes.items():
             price = q.get("price", 0)
-            avg_vol = q.get("avg_vol_20d", 0)
+            avg_vol = q.get("avg_vol_20d", 0)  # feed IEX — self-consistente para vol_ratio, no para MIN_AVG_VOLUME
             if not (MIN_PRICE <= price <= MAX_PRICE):
                 continue
 
@@ -108,11 +162,18 @@ class MarketScanner(BaseAgent):
             change_pct = q.get("change_pct", 0)
             # Override: massive volume spike + strong price move bypasses liquidity filter
             breakout_override = vol_ratio >= 10.0 and abs(change_pct) >= 10.0
-            if avg_vol < MIN_AVG_VOLUME and not breakout_override:
+
+            # Liquidez: volumen consolidado real cuando está disponible; si el
+            # fetch de yfinance falló para este ticker, se asume líquido en vez de
+            # descartarlo por un hueco de datos (falso negativo más barato que
+            # perder un candidato válido).
+            real_vol = q.get("avg_vol_20d_real")
+            liquid = real_vol is None or real_vol >= MIN_AVG_VOLUME
+            if not liquid and not breakout_override:
                 continue
 
             signals = []
-            if breakout_override and avg_vol < MIN_AVG_VOLUME:
+            if breakout_override and not liquid:
                 signals.append("liquidity_breakout")
             if vol_ratio >= VOLUME_SPIKE_THRESHOLD:
                 signals.append("volume_spike")
@@ -144,7 +205,7 @@ class MarketScanner(BaseAgent):
                     volume_ratio=round(vol_ratio, 2),
                     price_change_pct=round(change_pct, 2),
                     market_cap=0.0,
-                    avg_volume_20d=int(avg_vol),
+                    avg_volume_20d=int(real_vol if real_vol is not None else avg_vol),
                     high_52w=round(high_52w, 2),
                     low_52w=round(q.get("low_52w", 0), 2),
                     scan_signals=signals,
@@ -244,20 +305,17 @@ class MarketScanner(BaseAgent):
             if held:
                 lines = []
                 for p in held:
-                    gp = p.get("gp_pct", 0)
                     lines.append(
                         f"  - {p['ticker']} ({p['nombre']}): {p['cantidad']} units, "
                         f"entry={p.get('bep_usd') or p.get('bep_eur','?')}, "
-                        f"current G/P={gp:+.1f}%, sector={p.get('sector','?')}"
+                        f"current G/P={_held_gp_pct(p)}, sector={p.get('sector','?')}"
                     )
                 sectors = list({p.get("sector", "") for p in held})
-                summary = portfolio.get("account_summary", {})
                 portfolio_ctx = (
                     f"\nCURRENT PORTFOLIO (already held — avoid adding more exposure to same sectors):\n"
                     + "\n".join(lines)
                     + f"\nExposed sectors: {', '.join(sectors)}"
-                    + f"\nFree margin available: €{summary.get('margen_libre_eur', '?')}"
-                    + f"\nTotal unrealized P&L: €{summary.get('total_bp_eur', '?')}"
+                    + f"\nTotal unrealized P&L: {_unrealized_pl(portfolio)}"
                 )
 
         user_msg = f"""Market conditions: {market.spy_trend} | VIX: {market.vix_level} | {market.regime}
@@ -282,13 +340,17 @@ Consider the existing portfolio to avoid sector overconcentration and correlated
             return [c.ticker for c in top30]
 
     def _track_extended_tickers(self, candidates: list, portfolio: dict = None) -> None:
-        """Añade tickers con extended_intraday a seguimiento en portfolio.json para entrada en pullback."""
+        """Mantiene la lista de seguimiento en portfolio.json: añade los tickers
+        extendidos hoy (para entrada en pullback) y purga los caducados o los que
+        ya están en cartera. La purga corre aunque hoy no haya extendidos."""
         extended = [c for c in candidates if "extended_intraday" in c.scan_signals]
-        if not extended:
-            return
 
-        portfolio_path = os.path.join("contex", "portfolio.json")
-        if not os.path.exists(portfolio_path):
+        # config.CONTEXT_DIR se lee aquí y no al importar: era una ruta relativa al cwd
+        # ("contex/portfolio.json"), así que la suite de tests —que corre desde la raíz
+        # del repo— escribía en el portfolio.json REAL en vez de en su tmp_path. Leerlo
+        # en cada llamada permite además que los tests lo redirijan con patch.
+        portfolio_path = config.CONTEXT_DIR / "portfolio.json"
+        if not portfolio_path.exists():
             return
 
         try:
@@ -298,11 +360,27 @@ Consider the existing portfolio to avoid sector overconcentration and correlated
             self.logger.warning(f"Could not load portfolio for seguimiento update: {e}")
             return
 
-        today = datetime.now().strftime("%Y-%m-%d")
+        now = datetime.now()
+        today = now.strftime("%Y-%m-%d")
         seguimiento = data.get("seguimiento", [])
 
         # Tickers ya en cartera o ya en seguimiento — no duplicar
         held = {p["ticker"].upper() for p in data.get("acciones", []) + data.get("etfs", [])}
+
+        # Purga: la vigilancia cumplió (ya en cartera) o el precio de referencia
+        # caducó. Sin fecha legible se conserva: no se tira lo que no se puede datar.
+        kept, dropped = [], []
+        for e in seguimiento:
+            t = e.get("ticker", "").upper()
+            if t in held:
+                dropped.append(f"{t} (en cartera)")
+                continue
+            age = _entry_age_days(e, now)
+            if age is not None and age > SEGUIMIENTO_MAX_AGE_DAYS:
+                dropped.append(f"{t} ({age}d)")
+                continue
+            kept.append(e)
+        seguimiento = kept
         already_tracked = {e["ticker"].upper() for e in seguimiento}
 
         added = []
@@ -322,16 +400,19 @@ Consider the existing portfolio to avoid sector overconcentration and correlated
             seguimiento.append(entry)
             added.append(t)
 
-        if not added:
+        if not added and not dropped:
             return
 
         data["seguimiento"] = seguimiento
 
-        tmp_path = portfolio_path + ".tmp"
+        tmp_path = portfolio_path.parent / (portfolio_path.name + ".tmp")
         try:
             with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             os.replace(tmp_path, portfolio_path)
-            self.logger.info(f"Seguimiento: added {len(added)} extended tickers: {added}")
+            if added:
+                self.logger.info(f"Seguimiento: added {len(added)} extended tickers: {added}")
+            if dropped:
+                self.logger.info(f"Seguimiento: purged {len(dropped)}: {dropped}")
         except Exception as e:
             self.logger.warning(f"Failed to write seguimiento update: {e}")

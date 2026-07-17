@@ -269,16 +269,30 @@ class MarketDataFetcher:
         # Alpaca primary
         df = self._fetch_ohlcv_alpaca(ticker, period, timeframe)
         if not df.empty:
-            # Patch last bar with live price — solo para velas diarias
+            # Patch last bar with live price — solo para velas diarias.
+            #
+            # SOLO el precio, NUNCA el volumen. Alpaca sirve el feed IEX (una única
+            # bolsa, ~2% de la cuota del mercado US); yfinance sirve la cinta
+            # consolidada del SIP (100%). El precio es comparable entre ambos: el
+            # arbitraje mantiene los venues alineados y la última operación en IEX
+            # vale como precio. El VOLUMEN no lo es: son una muestra del 2% y el
+            # total. Parchearlo dejaba la última barra en volumen consolidado y las
+            # ~64 anteriores en IEX, así que volume_ratio_20d salía inflado ~50x
+            # (AMD 15/07: 6.36x cuando el real era 0.19x — un día flojo leído como
+            # explosión de volumen). Ese ratio alimenta score_technical_setup, o sea
+            # el ta_score = 35% del composite.
+            #
+            # Sin parche todo queda en IEX y el cociente vuelve a ser válido: IEX es
+            # una muestra ~constante, así que ratio(IEX) ≈ ratio(real). Es lo que ya
+            # hace _fetch_batch_quotes_alpaca (volumen y media, ambos IEX), y por eso
+            # el scanner daba el número bueno mientras la TA daba el malo.
+            # SIP en Alpaca requiere suscripción de pago; con la clave actual la API
+            # responde "subscription does not permit querying recent SIP data".
             if timeframe == "day":
                 try:
                     intraday = yf.Ticker(ticker).history(period="1d", interval="5m", auto_adjust=True)
                     if not intraday.empty:
-                        last_price = float(intraday["Close"].iloc[-1])
-                        last_vol = float(intraday["Volume"].sum())
-                        df.iloc[-1, df.columns.get_loc("Close")] = last_price
-                        if last_vol > 0:
-                            df.iloc[-1, df.columns.get_loc("Volume")] = last_vol
+                        df.iloc[-1, df.columns.get_loc("Close")] = float(intraday["Close"].iloc[-1])
                 except Exception:
                     pass
             return df
@@ -429,6 +443,48 @@ class MarketDataFetcher:
                     continue
 
         logger.info(f"Successfully refreshed {len(results)} tickers")
+        return results
+
+    def fetch_consolidated_avg_volume(self, tickers: list, batch_size: int = 50) -> dict:
+        """Volumen medio de 20 días vía yfinance (cinta consolidada del SIP).
+
+        Alpaca (feed IEX en este plan) da solo ~2% de la cuota del mercado US, así
+        que comparar avg_vol_20d de Alpaca contra MIN_AVG_VOLUME aplica un umbral
+        real ~50x mayor del que dice la config — de 111 tickers de la watchlist
+        solo 22 lo pasaban (CRM, ANET, AMAT... quedaban fuera pese a ~20-24M de
+        volumen real). Se usa SOLO para el filtro de liquidez en
+        market_scanner._apply_basic_filters; vol_ratio (spike de hoy) se queda en
+        IEX porque ahí el cociente sí es representativo (numerador y denominador
+        vienen de la misma muestra)."""
+        results = {}
+        batches = [tickers[i:i + batch_size] for i in range(0, len(tickers), batch_size)]
+        for i, batch in enumerate(batches):
+            try:
+                raw = yf.download(batch, period="30d", auto_adjust=True, progress=False, threads=True)
+                if raw.empty:
+                    continue
+                if len(batch) == 1:
+                    if "Volume" not in raw.columns:
+                        continue
+                    t_vol = raw["Volume"].dropna()
+                    if len(t_vol) >= 5:
+                        results[batch[0]] = float(t_vol.tail(20).mean())
+                else:
+                    volume = raw["Volume"] if "Volume" in raw else raw.xs("Volume", axis=1, level=0)
+                    for ticker in batch:
+                        try:
+                            if ticker not in volume.columns:
+                                continue
+                            t_vol = volume[ticker].dropna()
+                            if len(t_vol) < 5:
+                                continue
+                            results[ticker] = float(t_vol.tail(20).mean())
+                        except Exception:
+                            continue
+                if i < len(batches) - 1:
+                    time.sleep(2)
+            except Exception as e:
+                logger.warning(f"Consolidated volume batch {i+1} failed: {e}")
         return results
 
     def get_market_overview(self) -> MarketConditions:

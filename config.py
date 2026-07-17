@@ -137,6 +137,14 @@ DEFAULT_STOP_PCT = 0.08
 RECENT_LOSS_COOLDOWN_DAYS = 5
 RECENT_LOSS_MIN_ABS = 10.0   # pérdida neta mín. (€/$ abs.) para contar como "stop real"
 
+# ── Seguimiento (vigilancia de extendidos para entrada en pullback) ──────────
+# La lista era append-only y acumulaba tickers con precios de referencia de hace
+# semanas ("esperar pullback a $478" cuando ya no significa nada). Una entrada
+# caduca a los N días; también se purga en cuanto el ticker entra en cartera,
+# porque entonces la vigilancia ya cumplió su función.
+# Aplicado en market_scanner._track_extended_tickers.
+SEGUIMIENTO_MAX_AGE_DAYS = 30
+
 # ── R5 — Calidad de entrada ("exigir fuerza, no comprar debilidad") ──────────
 # Calibrado con backtest_entry_quality.py (83 recs largas, 06/05-15/06):
 # lo que abre en rojo y salta por stop NO es la extensión sino la DEBILIDAD —
