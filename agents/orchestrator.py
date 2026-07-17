@@ -201,6 +201,21 @@ class TradingOrchestrator:
         self.logger.info("Phase 1: Market scan")
         result = self.scanner.run(prev_context, portfolio)
         self.logger.info(f"Scan complete: {len(result.candidates)} candidates from {result.total_screened}")
+
+        # Lo que ya está en cartera se descarta aquí y no en RiskManager (5ª fase):
+        # así no gasta llamadas a Claude en fundamental + TA + sentiment para acabar
+        # filtrado igualmente. De las posiciones abiertas se ocupa el watchdog, que
+        # lee portfolio.json por su cuenta. RiskManager mantiene su filtro como red
+        # de seguridad para las rutas que no pasan por aquí (webhook/--tickers).
+        held = {
+            p["ticker"].upper()
+            for p in (portfolio or {}).get("acciones", []) + (portfolio or {}).get("etfs", [])
+        }
+        if held:
+            skipped = [c.ticker for c in result.candidates if c.ticker.upper() in held]
+            if skipped:
+                result.candidates = [c for c in result.candidates if c.ticker.upper() not in held]
+                self.logger.info(f"Descartados por estar ya en cartera: {skipped}")
         return result
 
     def _merge_and_rank(self, risk_results, ta_map, sentiment_map, scan_result, fund_map=None) -> list:
