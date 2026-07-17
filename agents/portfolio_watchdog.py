@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from config import (
-    CONTEXT_DIR, OUTPUT_DIR, LOGS_DIR,
+    CONTEXT_DIR, OUTPUT_DIR, LOGS_DIR, EARNINGS_BLOCK_DAYS,
     TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
 )
 from data.indicators import (
@@ -25,6 +25,8 @@ SIGNAL_RSI_BEARISH      = "RSI BAJISTA"        # RSI < 40 y cayendo
 SIGNAL_MACD_CROSS       = "MACD CRUCE BAJISTA" # MACD cruzó bajo señal
 SIGNAL_BELOW_EMA20      = "BAJO EMA20"         # precio bajo EMA20 + EMA20 cayendo
 SIGNAL_VOLUME_SPIKE_DN  = "VOLUMEN BAJISTA"    # volumen 2x en día negativo
+SIGNAL_NO_STOP          = "SIN STOP"           # posición abierta sin stop-loss colocado
+SIGNAL_EARNINGS_SOON    = "EARNINGS PRONTO"    # reporta resultados en <= EARNINGS_BLOCK_DAYS
 
 SL_PROXIMITY_PCT = 0.03   # alertar si precio está dentro del 3% del SL
 TP_PROXIMITY_PCT = 0.03   # alertar si precio está dentro del 3% del TP
@@ -52,17 +54,59 @@ def _fetch_ohlcv(ticker: str, days: int = 60):
         return None
 
 
+def _check_earnings(ticker: str) -> tuple:
+    """Días hasta el próximo earnings, vía Finviz. (None, None) si no se pudo
+    determinar (fallo de red, ticker no soportado, etc.) — un hueco de datos
+    no genera alerta, no la suprime falsamente."""
+    try:
+        from agents.fundamental_analyst import FundamentalAnalyst
+        data = FundamentalAnalyst._scrape_finviz_quote(ticker)
+        earnings_str = (data or {}).get("Earnings", "-") or "-"
+        days = FundamentalAnalyst._parse_earnings_days(earnings_str)
+        if days >= 999:
+            return None, None
+        return days, earnings_str
+    except Exception as e:
+        logger.warning(f"{ticker}: error consultando earnings — {e}")
+        return None, None
+
+
 def _analyze_position(pos: dict) -> list:
     """Devuelve lista de señales de alerta para una posición."""
     ticker = pos.get("ticker", "?")
     bep = pos.get("bep_usd") or pos.get("bep_eur") or 0
     sl = pos.get("stop_loss")
     tp = pos.get("take_profit")
+    qty = pos.get("cantidad", 0) or 0
     direccion = pos.get("direccion", "long")
+
+    signals = []
+
+    # Riesgos estructurales: no dependen de tener datos de mercado ni de la
+    # dirección de la posición, así que se comprueban primero y sobreviven
+    # aunque falle la descarga de OHLCV más abajo.
+
+    # 0a. Posición abierta sin stop-loss colocado — el patrón de pérdida más
+    # caro y más repetido del historial de esta cartera (INTC, RXT, TSM...).
+    if qty > 0 and not sl:
+        signals.append((SIGNAL_NO_STOP, f"{qty} acc. sin stop-loss colocado"))
+
+    # 0b. Earnings dentro de la misma ventana que bloquea entradas nuevas
+    # (EARNINGS_BLOCK_DAYS en fundamental_analyst) — esa regla nunca se
+    # aplicaba a posiciones ya abiertas, así que un evento binario podía
+    # atravesar un stop sin aviso previo (caso UNH, 15/07).
+    days_to_earn, earnings_str = _check_earnings(ticker)
+    if days_to_earn is not None and 0 <= days_to_earn <= EARNINGS_BLOCK_DAYS:
+        cuando = "mañana" if days_to_earn == 1 else f"en {days_to_earn}d" if days_to_earn else "HOY"
+        signals.append((SIGNAL_EARNINGS_SOON, f"reporta {cuando} ({earnings_str}) — el stop puede saltar por gap"))
+
+    # Solo aplica análisis técnico bajista para posiciones LONG
+    if direccion != "long":
+        return signals
 
     df = _fetch_ohlcv(ticker)
     if df is None:
-        return []
+        return signals
 
     close = df["Close"].squeeze()
     high  = df["High"].squeeze()
@@ -82,13 +126,8 @@ def _analyze_position(pos: dict) -> list:
     sig_prev  = float(signal_line.iloc[-2])
     avg_vol   = float(vol.iloc[-20:-1].mean())
     last_vol  = float(vol.iloc[-1])
-    last_chg  = price - float(close.iloc[-2])
-
-    signals = []
-
-    # Solo aplica análisis bajista para posiciones LONG
-    if direccion != "long":
-        return []
+    prev_close = float(close.iloc[-2])
+    last_chg_pct = (price - prev_close) / prev_close * 100 if prev_close else 0.0
 
     # 1. Stop cercano (dentro del 3%)
     if sl and price > 0:
@@ -119,9 +158,11 @@ def _analyze_position(pos: dict) -> list:
     if price < ema20 and ema20 < ema20_prev:
         signals.append((SIGNAL_BELOW_EMA20, f"${price:.2f} bajo EMA20 ${ema20:.2f} (EMA cayendo)"))
 
-    # 6. Volumen bajista (2x+ promedio en día negativo)
-    if last_chg < 0 and avg_vol > 0 and last_vol > avg_vol * 2:
-        signals.append((SIGNAL_VOLUME_SPIKE_DN, f"volumen {last_vol/avg_vol:.1f}x promedio en día -{abs(last_chg):.2f}"))
+    # 6. Volumen bajista (2x+ promedio en día negativo). last_chg en %, no en
+    # $ — un -6.85 aquí se leía como -6.85% cuando eran $6.85 (visto en vivo
+    # con AMD el 15/07: el pipeline reportaba -6.85 siendo en realidad -1.26%).
+    if last_chg_pct < 0 and avg_vol > 0 and last_vol > avg_vol * 2:
+        signals.append((SIGNAL_VOLUME_SPIKE_DN, f"volumen {last_vol/avg_vol:.1f}x promedio en día {last_chg_pct:+.1f}%"))
 
     return signals
 
@@ -137,9 +178,10 @@ def _build_telegram_message(alerts: list) -> str:
         broker_label = broker.replace("broker_", "B")
         has_tp = any(n == SIGNAL_TP_PROXIMITY for n, _ in signals)
         risk_signals = [(n, d) for n, d in signals if n != SIGNAL_TP_PROXIMITY]
+        is_critical = any(n in (SIGNAL_NO_STOP, SIGNAL_EARNINGS_SOON) for n, _ in signals)
         if has_tp and not risk_signals:
             severity = "OBJETIVO"
-        elif len(risk_signals) >= 2:
+        elif is_critical or len(risk_signals) >= 2:
             severity = "ALERTA"
         else:
             severity = "AVISO"
