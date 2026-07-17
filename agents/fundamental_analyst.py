@@ -157,15 +157,23 @@ class FundamentalAnalyst(BaseAgent):
                 self.logger.warning(f"  {cand.ticker}: Finviz fetch error — {e}")
                 filtered.append(cand)
 
-        self._save_fundcache(self._cache)
         blocked_count = len(candidates) - len(filtered)
 
-        # Screener semanal: descubre nuevos candidatos (solo si caché > CACHE_TTL_DAYS)
+        # Descubrimiento de nuevos candidatos. Corre en CADA sesión a propósito:
+        # no consume tokens (este agente nunca llama a Claude) y las fases que sí
+        # los gastan van topadas por constante (TA_TOP_N/SENTIMENT_TOP_N/RISK_TOP_N),
+        # así que descubrir de más no encarece la ejecución — solo cambia qué
+        # tickers compiten por esas plazas.
         existing = {c.ticker for c in filtered + rest}
         new_candidates = self._run_screener(existing, fund_map)
 
-        # Screener de gappers: descubrimiento DIARIO de disparos por noticia/evento
+        # Screener de gappers: disparos por noticia/evento del día
         gappers = self._run_gappers_screener(existing, fund_map)
+
+        # Guardado al final: así también se cachean los fundamentales de los
+        # tickers descubiertos por los screeners (antes se guardaba antes de
+        # ellos y se re-descargaban en cada sesión).
+        self._save_fundcache(self._cache)
 
         all_candidates = filtered + new_candidates + gappers + rest
         self.logger.info(
@@ -184,7 +192,7 @@ class FundamentalAnalyst(BaseAgent):
         try:
             return json.loads(path.read_text(encoding="utf-8"))
         except Exception:
-            return {"tickers": {}, "screener": {"updated": None, "long": [], "short": []}}
+            return {"tickers": {}}
 
     def _save_fundcache(self, cache: dict) -> None:
         path = Path(CONTEXT_DIR) / "fundamentals_cache.json"
@@ -261,7 +269,8 @@ class FundamentalAnalyst(BaseAgent):
                     )
         return {}
 
-    def _scrape_finviz_quote(self, ticker: str) -> dict:
+    @staticmethod
+    def _scrape_finviz_quote(ticker: str) -> dict:
         """Parsea la página de cotización de Finviz sin depender de
         finvizfinance.ticker_fundament().
 
@@ -271,6 +280,10 @@ class FundamentalAnalyst(BaseAgent):
         todas en un único dict label->valor, que es la forma que espera
         `_build_result`. Reutiliza la sesión de finvizfinance (con la cookie de
         FINVIZ_AUTH_COOKIE si está) y su config de UA/proxy/timeout.
+
+        Sin estado de instancia (no usa self): también la llama
+        portfolio_watchdog para chequear earnings de posiciones abiertas sin
+        tener que instanciar el agente completo (que exige cliente de Claude).
         """
         import finvizfinance.util as fv_util
         from bs4 import BeautifulSoup
@@ -301,6 +314,74 @@ class FundamentalAnalyst(BaseAgent):
         if company:
             data["Company"] = company.get_text(strip=True)
         return data
+
+    @staticmethod
+    def _scrape_finviz_screener(filters: dict, limit: int) -> list:
+        """Devuelve la lista de tickers de un screener de Finviz.
+
+        No usa Overview.screener_view() de finvizfinance 1.3.0: con el layout
+        de jul-2026 la celda del ticker lleva DOS enlaces (el del logo, que
+        muestra la inicial como placeholder, y el `tab-link` con el ticker).
+        La librería lee la celda con `col.text`, que concatena ambos y produce
+        basura: ADSK -> AADSK, A -> AA. Eso provocaba 404s en masa y, cuando el
+        resultado existía de verdad como ticker, colaba fantasmas en la
+        watchlist (A/Agilent -> AA/Alcoa).
+
+        Aquí el ticker se lee del parámetro `t` de la query del enlace, que es
+        el dato canónico. Se acepta cualquier ruta (jul-2026 Finviz pasó de
+        `quote.ashx?t=` a `stock?t=`), así que sobrevive a otro cambio de ruta.
+        Se reutiliza Overview solo para traducir filters_dict -> params de URL,
+        y la sesión de finvizfinance (cookie/UA/proxy/timeout), igual que
+        `_scrape_finviz_quote`.
+        """
+        import finvizfinance.util as fv_util
+        from finvizfinance.screener.overview import Overview
+        from bs4 import BeautifulSoup
+        from urllib.parse import urlparse, parse_qs
+
+        overview = Overview()
+        overview.set_filter(filters_dict=filters)
+        params = dict(overview.request_params)
+        params["o"] = "ticker"  # orden ascendente por ticker
+
+        tickers, seen = [], set()
+        for offset in range(1, limit + 1, Overview.size):
+            if offset > 1:
+                params["r"] = offset
+
+            r = fv_util.session.get(
+                overview.url,
+                params=params,
+                headers=fv_util.headers,
+                timeout=fv_util.timeout_value,
+                proxies=fv_util.proxy_dict,
+            )
+            r.raise_for_status()
+            soup = BeautifulSoup(r.text, "lxml")
+
+            table = soup.find("table", class_="screener_table")
+            if not table:
+                break
+
+            page_tickers = []
+            for row in table.find_all("tr"):
+                ticker = ""
+                for link in row.find_all("a", href=True):
+                    qs = parse_qs(urlparse(link["href"]).query)
+                    ticker = (qs.get("t") or [""])[0].strip().upper()
+                    if ticker:
+                        break
+                if ticker and ticker not in seen:
+                    seen.add(ticker)
+                    page_tickers.append(ticker)
+
+            if not page_tickers:
+                break
+            tickers.extend(page_tickers)
+            if len(tickers) >= limit:
+                break
+
+        return tickers[:limit]
 
     # ------------------------------------------------------------------
     # Scoring
@@ -412,14 +493,9 @@ class FundamentalAnalyst(BaseAgent):
     # ------------------------------------------------------------------
 
     def _run_screener(self, existing_tickers: set, fund_map: dict) -> list:
-        screener_cache = self._cache.get("screener", {})
-        if self._cache_fresh(screener_cache):
-            self.logger.info("  Screener: caché vigente, omitido")
-            return []
-        self._cache["screener"] = {"updated": datetime.now().isoformat(), "long": [], "short": []}
-
-        from finvizfinance.screener.overview import Overview
-
+        """Descubre candidatos nuevos vía screeners de Finviz. Corre en cada
+        sesión: ver la nota en `run()` sobre por qué no encarece la ejecución.
+        """
         new_candidates = []
         configs = [
             (LONG_SCREENER_FILTERS,        8, "long_screener"),
@@ -430,15 +506,8 @@ class FundamentalAnalyst(BaseAgent):
 
         for filters, limit, label in configs:
             try:
-                overview = Overview()
-                overview.set_filter(filters_dict=filters)
-                df = overview.screener_view(limit=limit)
-                if df is None or df.empty:
-                    continue
-
-                for _, row in df.iterrows():
-                    ticker = str(row.get("Ticker", "")).strip()
-                    if not ticker or ticker in existing_tickers:
+                for ticker in self._scrape_finviz_screener(filters, limit):
+                    if ticker in existing_tickers:
                         continue
                     try:
                         fdata, _ = self._fetch_finviz(ticker)
@@ -487,8 +556,6 @@ class FundamentalAnalyst(BaseAgent):
         if not GAPPERS_ENABLED:
             return []
 
-        from finvizfinance.screener.overview import Overview
-
         new_candidates = []
         configs = [
             (GAPPERS_LONG_FILTERS,  "gapper_long",  "long"),
@@ -497,15 +564,8 @@ class FundamentalAnalyst(BaseAgent):
 
         for filters, label, direction in configs:
             try:
-                overview = Overview()
-                overview.set_filter(filters_dict=filters)
-                df = overview.screener_view(limit=GAPPERS_LIMIT)
-                if df is None or df.empty:
-                    continue
-
-                for _, row in df.iterrows():
-                    ticker = str(row.get("Ticker", "")).strip()
-                    if not ticker or ticker in existing_tickers:
+                for ticker in self._scrape_finviz_screener(filters, GAPPERS_LIMIT):
+                    if ticker in existing_tickers:
                         continue
                     try:
                         fdata, _ = self._fetch_finviz(ticker)
@@ -613,7 +673,8 @@ class FundamentalAnalyst(BaseAgent):
         except Exception:
             return 0.0
 
-    def _parse_earnings_days(self, earnings_str: str) -> int:
+    @staticmethod
+    def _parse_earnings_days(earnings_str: str) -> int:
         if not earnings_str or earnings_str.strip() in ("-", ""):
             return 999
         try:
