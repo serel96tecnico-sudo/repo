@@ -187,6 +187,9 @@ def open_position_risk(portfolio) -> float:
         return 0.0
     total = 0.0
     for p in portfolio.get("acciones", []) + portfolio.get("etfs", []):
+        if not isinstance(p, dict):
+            logger.warning(f"open_position_risk: entrada malformada en acciones/etfs ignorada: {p!r}")
+            continue
         qty = p.get("cantidad", 0) or 0
         px = p.get("precio_actual_usd") or p.get("bep_usd") or 0
         if qty <= 0 or px <= 0:
