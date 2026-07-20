@@ -4,6 +4,8 @@
 
 # Context files con datos vivos/sensibles
 contex/portfolio.json
+contex/portfolio.json.bak-*
+contex/price_alerts.json
 contex/daily_state_*.json
 contex/ticker_universe_*.json
 contex/fundamentals_cache.json
