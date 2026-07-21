@@ -44,6 +44,12 @@ TOLERANCE_ATR = 0.25
 # casos no se descartan, se separan como "ya en zona" — son decision de hoy.
 MIN_DISTANCE_ATR = 0.5
 
+# Informes ausentes consecutivos que una alerta tolera antes de retirarse. El
+# pipeline corre 2 veces al dia (manana/tarde) y un candidato bueno puede no
+# entrar en el corte de un run concreto sin que el setup haya muerto (a ACIW le
+# paso el 20/07). Con 2, sobrevive a un hueco aislado; a 3 ausencias se retira.
+MISSING_GRACE = 2
+
 # Un nivel mas lejos que esto es ruido (indicador desfasado o trigger absurdo).
 MAX_DISTANCE_PCT = 0.25
 
@@ -232,6 +238,7 @@ def build_alerts(report: dict, portfolio: dict, min_score: float) -> tuple:
             "armed": armed.isoformat(),
             "expires": _expiry(armed).isoformat(),
             "fired": None,
+            "missing": 0,
             # Contexto informativo del dia del armado. NO son parametros
             # operativos: al dispararse hay que recalcular sizing/stop y
             # revalidar R1/R2/R6/R7 contra la cartera de ese momento.
@@ -251,6 +258,67 @@ def build_alerts(report: dict, portfolio: dict, min_score: float) -> tuple:
     alerts.sort(key=lambda a: -a["context"]["score"])
     in_zone.sort(key=lambda a: -a["context"]["score"])
     return alerts, in_zone, skipped
+
+
+def _load_existing() -> dict:
+    if ALERTS_FILE.exists():
+        try:
+            return json.loads(ALERTS_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
+def merge_alerts(new_alerts, existing, held, today=None, grace=MISSING_GRACE):
+    """Fusiona las alertas recien armadas con las del fichero previo.
+
+    Una alerta armada vive hasta que caduca, se llena su gracia de ausencias, o
+    su ticker entra en cartera. Mientras siga apareciendo en el informe se
+    re-arma (nivel fresco) pero conserva su reloj original. Devuelve
+    (activas, retiradas) con retiradas = lista de (ticker, motivo).
+    """
+    today = today or date.today()
+    today_iso = today.isoformat()
+    new_by = {a["ticker"]: a for a in new_alerts}
+    prev = {a["ticker"]: a for a in (existing or {}).get("alerts", [])}
+    active, retired = [], []
+
+    for tk, old in prev.items():
+        if tk in held:
+            retired.append((tk, "entrada abierta"))
+            continue
+        expired = today_iso > old.get("expires", today_iso)
+
+        if tk in new_by:
+            fresh = dict(new_by[tk])
+            if expired:
+                # Reaparece pero su ventana original ya vencio: reloj nuevo.
+                active.append(fresh)
+            else:
+                # Re-armado: nivel y contexto frescos, reloj original intacto.
+                fresh["armed"] = old.get("armed", fresh["armed"])
+                fresh["expires"] = old.get("expires", fresh["expires"])
+                fresh["fired"] = old.get("fired")
+                fresh["missing"] = 0
+                active.append(fresh)
+        else:
+            # Ausente del informe de hoy.
+            if expired:
+                retired.append((tk, "caducada"))
+                continue
+            miss = old.get("missing", 0) + 1
+            if miss > grace:
+                retired.append((tk, f"ausente {miss} informes"))
+                continue
+            old["missing"] = miss
+            active.append(old)  # nivel congelado del ultimo armado
+
+    for tk, fresh in new_by.items():
+        if tk not in prev:
+            active.append(dict(fresh))
+
+    active.sort(key=lambda a: -a["context"]["score"])
+    return active, retired
 
 
 def _rows(entries, show_expiry=True):
@@ -298,6 +366,8 @@ def main():
     ap.add_argument("--date", help="fecha del informe (YYYY-MM-DD); por defecto el mas reciente")
     ap.add_argument("--min-score", type=float, default=DEFAULT_MIN_SCORE)
     ap.add_argument("--write", action="store_true", help="escribe contex/price_alerts.json")
+    ap.add_argument("--no-merge", action="store_true",
+                    help="reconstruye desde cero, ignora las alertas ya guardadas")
     args = ap.parse_args()
 
     report, report_path = _load_report(args.date)
@@ -307,7 +377,17 @@ def main():
         portfolio = {}
 
     alerts, in_zone, skipped = build_alerts(report, portfolio, args.min_score)
+
+    retired = []
+    existing = {} if args.no_merge else _load_existing()
+    if existing.get("alerts"):
+        alerts, retired = merge_alerts(alerts, existing, _open_tickers(portfolio))
+
     _print_table(alerts, in_zone, skipped, report_path, args.min_score)
+    if retired:
+        print("\nRetiradas (fusion):")
+        for ticker, reason in retired:
+            print(f"  {ticker:<8} {reason}")
 
     if args.write:
         payload = {
