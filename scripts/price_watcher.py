@@ -59,7 +59,7 @@ def _market_open(now_utc: datetime = None) -> bool:
     if ZoneInfo is None:
         # Sin zoneinfo no arriesgamos a fallar cerrado: dejamos vigilar.
         return True
-    et = (now_utc or datetime.utcnow().replace(tzinfo=ZoneInfo("UTC"))).astimezone(ZoneInfo("America/New_York"))
+    et = (now_utc or datetime.now(ZoneInfo("UTC"))).astimezone(ZoneInfo("America/New_York"))
     if et.weekday() >= 5:
         return False
     if et.strftime("%Y-%m-%d") in US_MARKET_HOLIDAYS_2026:
