@@ -313,6 +313,13 @@
       "net_pl_eur": -35.09,
       "fecha_cierre": "2026-05-15",
       "nota": "SL. Net -€35.09."
+    },
+    {
+      "ticker": "AAPU",
+      "broker": "broker_2",
+      "net_pl_eur": -31.62,
+      "fecha_cierre": "2026-07-20",
+      "nota": "SL @ $43.92 (14 @ entrada $46.00). Gross $-29.12. ETP AAPL 1.5x. Net -EUR31.62."
     }
   ]
 }
