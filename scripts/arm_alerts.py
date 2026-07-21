@@ -23,6 +23,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config import CONTEXT_DIR, OUTPUT_DIR
+from utils.risk_policy import recent_loss_cooldown
 
 ALERTS_FILE = CONTEXT_DIR / "price_alerts.json"
 
@@ -201,6 +202,10 @@ def build_alerts(report: dict, portfolio: dict, min_score: float) -> tuple:
     """
     armed = date.today()
     held = _open_tickers(portfolio)
+    # R7 — un ticker recien stopeado que se re-recomienda a los pocos dias es el
+    # patron que mas pierde. No tiene sentido armarle una alerta de re-entrada en
+    # la misma direccion. Reutiliza la logica de la politica de riesgo.
+    cooldown = recent_loss_cooldown(portfolio)
     alerts, in_zone, skipped = [], [], []
 
     for cand in report.get("candidates") or []:
@@ -222,6 +227,15 @@ def build_alerts(report: dict, portfolio: dict, min_score: float) -> tuple:
         res = resolve_level(cand)
         if "skip" in res:
             skipped.append((ticker, score, res["skip"]))
+            continue
+
+        # R7: veto si el ticker cerro en perdida reciente en esta misma direccion
+        # (direction None en el cierre => veta cualquier direccion, conservador).
+        cd = cooldown.get(ticker)
+        if cd and cd["direction"] in (None, res["direction"]):
+            dirtxt = "cualquier dir" if cd["direction"] is None else cd["direction"]
+            skipped.append((ticker, score,
+                            f"R7 cooldown: perdida {cd['pl']} hace {cd['days_ago']}d ({dirtxt})"))
             continue
 
         ta = cand.get("ta_data") or {}
