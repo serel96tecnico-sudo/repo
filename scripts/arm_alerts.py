@@ -361,6 +361,51 @@ def _print_table(alerts, in_zone, skipped, report_path, min_score):
             print(f"  {ticker:<8} {score:>5.2f}  {reason}")
 
 
+def run_arm(day: str = None, min_score: float = DEFAULT_MIN_SCORE,
+            write: bool = False, merge: bool = True) -> dict:
+    """Arma (y opcionalmente fusiona/escribe) las alertas del informe indicado.
+
+    Punto de entrada programatico — lo usa el orchestrator al cerrar el pipeline
+    y tambien main() para la CLI. Devuelve un dict con todo lo calculado.
+    """
+    report, report_path = _load_report(day)
+    try:
+        portfolio = json.loads((CONTEXT_DIR / "portfolio.json").read_text(encoding="utf-8"))
+    except Exception:
+        portfolio = {}
+
+    alerts, in_zone, skipped = build_alerts(report, portfolio, min_score)
+
+    retired = []
+    existing = _load_existing() if merge else {}
+    if existing.get("alerts"):
+        alerts, retired = merge_alerts(alerts, existing, _open_tickers(portfolio))
+
+    if write:
+        payload = {
+            "generated": datetime.now().isoformat(timespec="seconds"),
+            "source_report": report_path.name,
+            "min_score": min_score,
+            "alerts": alerts,
+            # Se persisten aparte: el vigilante no debe armarlas, pero el
+            # informe de la manana si debe poder recordarlas.
+            "in_zone": in_zone,
+        }
+        tmp = ALERTS_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(ALERTS_FILE)
+
+    return {
+        "report_path": report_path,
+        "min_score": min_score,
+        "alerts": alerts,
+        "in_zone": in_zone,
+        "skipped": skipped,
+        "retired": retired,
+        "written": write,
+    }
+
+
 def main():
     ap = argparse.ArgumentParser(description="Arma alertas de precio sobre los WATCH del informe")
     ap.add_argument("--date", help="fecha del informe (YYYY-MM-DD); por defecto el mas reciente")
@@ -370,38 +415,16 @@ def main():
                     help="reconstruye desde cero, ignora las alertas ya guardadas")
     args = ap.parse_args()
 
-    report, report_path = _load_report(args.date)
-    try:
-        portfolio = json.loads((CONTEXT_DIR / "portfolio.json").read_text(encoding="utf-8"))
-    except Exception:
-        portfolio = {}
+    res = run_arm(day=args.date, min_score=args.min_score,
+                  write=args.write, merge=not args.no_merge)
 
-    alerts, in_zone, skipped = build_alerts(report, portfolio, args.min_score)
-
-    retired = []
-    existing = {} if args.no_merge else _load_existing()
-    if existing.get("alerts"):
-        alerts, retired = merge_alerts(alerts, existing, _open_tickers(portfolio))
-
-    _print_table(alerts, in_zone, skipped, report_path, args.min_score)
-    if retired:
+    _print_table(res["alerts"], res["in_zone"], res["skipped"], res["report_path"], res["min_score"])
+    if res["retired"]:
         print("\nRetiradas (fusion):")
-        for ticker, reason in retired:
+        for ticker, reason in res["retired"]:
             print(f"  {ticker:<8} {reason}")
 
-    if args.write:
-        payload = {
-            "generated": datetime.now().isoformat(timespec="seconds"),
-            "source_report": report_path.name,
-            "min_score": args.min_score,
-            "alerts": alerts,
-            # Se persisten aparte: el vigilante no debe armarlas, pero el
-            # informe de la manana si debe poder recordarlas.
-            "in_zone": in_zone,
-        }
-        tmp = ALERTS_FILE.with_suffix(".tmp")
-        tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-        tmp.replace(ALERTS_FILE)
+    if res["written"]:
         print(f"\nEscrito: {ALERTS_FILE}")
     else:
         print("\n(previsualizacion — usa --write para guardar)")

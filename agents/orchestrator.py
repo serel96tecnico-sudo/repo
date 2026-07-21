@@ -195,6 +195,19 @@ class TradingOrchestrator:
             except Exception as e:
                 self.logger.warning(f"Portfolio watchdog error (non-critical): {e}")
 
+        # Arma las alertas de precio sobre los WATCH de este informe (ambas
+        # sesiones). Fusiona con las ya guardadas: re-arma niveles frescos y
+        # aplica gracia/caducidad. Lo consume scripts/price_watcher.py.
+        try:
+            from scripts.arm_alerts import run_arm
+            res = run_arm(day=today, write=True, merge=True)
+            self.logger.info(
+                f"Alertas armadas: {len(res['alerts'])} activas, "
+                f"{len(res['in_zone'])} ya en zona, {len(res['retired'])} retiradas."
+            )
+        except Exception as e:
+            self.logger.warning(f"Armado de alertas error (non-critical): {e}")
+
         return report
 
     def _run_scan_phase(self, prev_context: dict, portfolio: dict = None):
