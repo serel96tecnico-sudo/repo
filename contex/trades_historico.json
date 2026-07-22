@@ -320,6 +320,27 @@
       "net_pl_eur": -31.62,
       "fecha_cierre": "2026-07-20",
       "nota": "SL @ $43.92 (14 @ entrada $46.00). Gross $-29.12. ETP AAPL 1.5x. Net -EUR31.62."
+    },
+    {
+      "ticker": "LMND",
+      "broker": "broker_2",
+      "net_pl_eur": 6.4,
+      "fecha_cierre": "2026-07-21",
+      "nota": "SL @ $66.34 (10 @ entrada $65.45, stop trailado desde 62.06). Gross +$8.9. Net +EUR6.4."
+    },
+    {
+      "ticker": "UNH",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 2,
+      "entrada_usd": 426.0,
+      "cierre_usd": 431.31,
+      "gross_pl_usd": 10.62,
+      "net_pl_eur": 2.6,
+      "proceeds_eur": 752.07,
+      "cost_eur": 749.47,
+      "fecha_cierre": "2026-07-22",
+      "nota": "CONFIRMADO detalle DeGiro. Venta 2 @$431.31 -> recibido EUR752.07 (FX 1.1411, AutoFX -1.89, comis -2.00). Compra 2 @$426.00 -> pagado EUR749.47 (FX 1.1427, AutoFX -1.86, comis -2.00). Net realizado = +EUR2.60 (gross vs BEP +$10.62; fees round-trip EUR7.75). Salida en verde sobre el stop $410."
     }
   ]
 }
