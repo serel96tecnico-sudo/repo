@@ -341,6 +341,32 @@
       "cost_eur": 749.47,
       "fecha_cierre": "2026-07-22",
       "nota": "CONFIRMADO detalle DeGiro. Venta 2 @$431.31 -> recibido EUR752.07 (FX 1.1411, AutoFX -1.89, comis -2.00). Compra 2 @$426.00 -> pagado EUR749.47 (FX 1.1427, AutoFX -1.86, comis -2.00). Net realizado = +EUR2.60 (gross vs BEP +$10.62; fees round-trip EUR7.75). Salida en verde sobre el stop $410."
+    },
+    {
+      "ticker": "DLTR",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 5,
+      "entrada_usd": 130.57,
+      "cierre_usd": 120.18,
+      "gross_pl_usd": -51.95,
+      "net_pl_usd": -56.95,
+      "fecha_cierre": "2026-07-23",
+      "hora_cierre": "15:30:08",
+      "nota": "CONFIRMADO historico Colmex (Vender Stop Loss 5 @$120.18, 15:30:08, Ejecutadas). BEP $130.57, stop $120.50 -> slippage a $120.18 en la apertura roja. Gross -$51.95, net ~-$56.95 tras fees round-trip ~$5. La mas floja de la cartera; R7 la deja en cooldown."
+    },
+    {
+      "ticker": "AEHR",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 7,
+      "entrada_usd": 80.36,
+      "cierre_usd": 87.8,
+      "gross_pl_usd": 52.08,
+      "net_pl_usd": 47.08,
+      "fecha_cierre": "2026-07-23",
+      "hora_cierre": "21:06:31",
+      "nota": "CONFIRMADO Historico Colmex (Vender Stop Loss 7 @$87.80, 21:06:31). BEP $80.36, stop $90.00 -> slippage -$2.20 (-2.4%). Salto al final de la sesion, no en la apertura. Gross +$52.08, net ~+$47.08 tras fees $5. Ganadora: el stop trailado a 90.00 el 21/07 dejo el trade sin riesgo."
     }
   ]
 }

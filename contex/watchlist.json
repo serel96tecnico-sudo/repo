@@ -1,72 +1,7 @@
 {
-  "updated": "2026-07-22",
+  "updated": "2026-07-23",
   "description": "DeGiro favourites list",
   "entries": [
-    {
-      "ticker": "UNH",
-      "added": "2026-05-27",
-      "source": "manual"
-    },
-    {
-      "ticker": "UPST",
-      "added": "2026-05-27",
-      "source": "manual"
-    },
-    {
-      "ticker": "MU",
-      "added": "2026-06-14",
-      "source": "manual"
-    },
-    {
-      "ticker": "SNDK",
-      "added": "2026-06-14",
-      "source": "manual"
-    },
-    {
-      "ticker": "BE",
-      "added": "2026-06-14",
-      "source": "manual"
-    },
-    {
-      "ticker": "ABSI",
-      "added": "2026-06-15",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ACIW",
-      "added": "2026-06-15",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ADSK",
-      "added": "2026-06-15",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ALKT",
-      "added": "2026-06-15",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ALMS",
-      "added": "2026-06-15",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ALTO",
-      "added": "2026-06-15",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ARCC",
-      "added": "2026-06-15",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ARKO",
-      "added": "2026-06-15",
-      "source": "long_screener"
-    },
     {
       "ticker": "CRWV",
       "added": "2026-06-16",
@@ -561,22 +496,74 @@
       "ticker": "CHRD",
       "added": "2026-07-22",
       "source": "ta_monthly_breakout"
+    },
+    {
+      "ticker": "ABR",
+      "added": "2026-07-23",
+      "source": "short_screener"
+    },
+    {
+      "ticker": "ACI",
+      "added": "2026-07-23",
+      "source": "short_screener"
+    },
+    {
+      "ticker": "ADC",
+      "added": "2026-07-23",
+      "source": "short_screener"
+    },
+    {
+      "ticker": "BOXX",
+      "added": "2026-07-23",
+      "source": "ta_monthly_breakout"
+    },
+    {
+      "ticker": "CALF",
+      "added": "2026-07-23",
+      "source": "ta_monthly_breakout"
+    },
+    {
+      "ticker": "CGGR",
+      "added": "2026-07-23",
+      "source": "ta_monthly_breakout"
+    },
+    {
+      "ticker": "CINF",
+      "added": "2026-07-23",
+      "source": "ta_monthly_breakout"
+    },
+    {
+      "ticker": "ABSI",
+      "added": "2026-07-23",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "ACIW",
+      "added": "2026-07-23",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "ARTV",
+      "added": "2026-07-23",
+      "source": "ta_weekly_long"
+    },
+    {
+      "ticker": "BCI",
+      "added": "2026-07-23",
+      "source": "ta_monthly_breakout"
+    },
+    {
+      "ticker": "BPOP",
+      "added": "2026-07-23",
+      "source": "ta_monthly_breakout"
+    },
+    {
+      "ticker": "CGGO",
+      "added": "2026-07-23",
+      "source": "ta_monthly_breakout"
     }
   ],
   "tickers": [
-    "UNH",
-    "UPST",
-    "MU",
-    "SNDK",
-    "BE",
-    "ABSI",
-    "ACIW",
-    "ADSK",
-    "ALKT",
-    "ALMS",
-    "ALTO",
-    "ARCC",
-    "ARKO",
     "CRWV",
     "ARXS",
     "ACM",
@@ -675,6 +662,19 @@
     "CAKE",
     "CDP",
     "CGUS",
-    "CHRD"
+    "CHRD",
+    "ABR",
+    "ACI",
+    "ADC",
+    "BOXX",
+    "CALF",
+    "CGGR",
+    "CINF",
+    "ABSI",
+    "ACIW",
+    "ARTV",
+    "BCI",
+    "BPOP",
+    "CGGO"
   ]
 }
