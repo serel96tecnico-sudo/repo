@@ -382,6 +382,21 @@
       "fecha_entrada": "2026-07-22",
       "fecha_cierre": "2026-07-24",
       "nota": "CONFIRMADO detalle DeGiro. Venta 2 @$524.81 -> recibido EUR918.93 (FX 1.1369, AutoFX -2.31, comis -2.00). Compra 2 @$556.00 -> pagado EUR979.03 (FX 1.141, AutoFX -2.44, comis -2.00). Net realizado = -EUR60.10 (gross vs BEP -$62.38). Stop $524.74 -> fill $524.81. 2o stop de AMD en 9 dias (patron R7)."
+    },
+    {
+      "ticker": "PSX",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 5,
+      "entrada_usd": 178.65,
+      "cierre_usd": 205.065,
+      "gross_pl_usd": 132.08,
+      "net_pl_eur": 111.08,
+      "proceeds_eur": 896.74,
+      "cost_eur": 785.66,
+      "fecha_cierre": "2026-07-27",
+      "hora_cierre": "15:32",
+      "nota": "27/07 CONFIRMADO (detalle transaccion DeGiro, ambas patas). VENTA 5 @$205.065 (MSRP/NSY): $1,025.33 -> EUR900.99 (FX 1.138), AutoFX -EUR2.25, comis -EUR2.00 -> recibido EUR896.74. COMPRA 5 @$178.65 (CDED/NSY): -$893.25 -> -EUR781.71 (FX 1.1427), AutoFX -EUR1.95, comis -EUR2.00 -> pagado EUR785.66. P&L REALIZADO NETO = 896.74 - 785.66 = +EUR111.08 (gross vs BEP +$132.08 +14.8%; fees round-trip EUR8.20). GANADORA solida: energetica cerrada tras semanas en verde; libero capital para NVDA (5 @$201)."
     }
   ]
 }
