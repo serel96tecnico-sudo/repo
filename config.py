@@ -59,6 +59,16 @@ EARNINGS_HOLD_BLOCK_DAYS = 12
 WATCHLIST_PROMOTE_MIN_FUND = 7.0
 WATCHLIST_MAX_SIZE = 130
 
+# Filtro de beta en el descubrimiento (2026-07-27). La tesis es momentum de alta
+# beta (estrategia_riesgo.md §1): un nombre que apenas se mueve no da recorrido de
+# swing aunque el índice se agite (EWS beta 0.53, BANC 0.74). Se filtra en los
+# screeners de descubrimiento — NO en la watchlist curada (los Tier A de baja beta
+# se añaden a mano). String de Finviz: "Over 1" / "Over 1.5" / "Over 2".
+# OJO: la beta no caza nombres laterales de beta normal (BRKR beta 1.28, volátil
+# pero sin tendencia) — de eso se encarga el filtro C (ADX). Un string inválido
+# tumba la query del screener; usar solo valores verificados con set_filter.
+SCREENER_MIN_BETA = "Over 1"
+
 MIN_PRICE = 1.0
 MAX_PRICE = 5000.0
 MIN_AVG_VOLUME = 500_000

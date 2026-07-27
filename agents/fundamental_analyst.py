@@ -10,19 +10,23 @@ from agents.base_agent import BaseAgent
 from models.schemas import ScanCandidate, FundamentalResult
 from config import (
     EARNINGS_BLOCK_DAYS, EARNINGS_HOLD_BLOCK_DAYS, FUNDAMENTAL_TOP_N, CONTEXT_DIR,
-    WATCHLIST_PROMOTE_MIN_FUND, WATCHLIST_MAX_SIZE,
+    WATCHLIST_PROMOTE_MIN_FUND, WATCHLIST_MAX_SIZE, SCREENER_MIN_BETA,
 )
 
 CACHE_TTL_DAYS          = 7   # días antes de refrescar datos fundamentales
 EARNINGS_REFRESH_DAYS   = 14  # siempre refresca si earnings en menos de X días
 
 # Screener filter keys that finvizfinance accepts
+# "Beta": SCREENER_MIN_BETA en los 4 screeners de descubrimiento — filtra nombres
+# que apenas se mueven (EWS 0.53, BANC 0.74). NO va en los gappers (event-driven:
+# un valor de beta baja gapeando +5% por noticia sigue siendo un candidato válido).
 LONG_SCREENER_FILTERS = {
     "Average Volume": "Over 500K",
     "Country": "USA",
     "Analyst Recom.": "Strong Buy (1)",
     "InsiderTransactions": "Positive (>0%)",
     "Price": "Over $5",
+    "Beta": SCREENER_MIN_BETA,
 }
 SHORT_SCREENER_FILTERS = {
     "Average Volume": "Over 500K",
@@ -30,6 +34,7 @@ SHORT_SCREENER_FILTERS = {
     "Float Short": "Over 10%",
     "Performance": "Week Down",
     "Price": "Over $5",
+    "Beta": SCREENER_MIN_BETA,
 }
 # TA screeners — cribado en timeframe semanal/mensual para descubrir nuevos candidatos
 TA_WEEKLY_LONG_FILTERS = {
@@ -42,6 +47,7 @@ TA_WEEKLY_LONG_FILTERS = {
     "Performance": "Week Up",
     "Performance 2": "Month Up",
     "RSI (14)": "Not Overbought (<60)",
+    "Beta": SCREENER_MIN_BETA,
 }
 TA_MONTHLY_BREAKOUT_FILTERS = {
     "Average Volume": "Over 500K",
@@ -52,6 +58,7 @@ TA_MONTHLY_BREAKOUT_FILTERS = {
     "Performance": "Quarter Up",
     "Performance 2": "Half Up",
     "Relative Volume": "Over 1",
+    "Beta": SCREENER_MIN_BETA,
 }
 # Gappers — descubrimiento DIARIO de valores que se disparan HOY por noticia/evento.
 # A diferencia de los screeners de arriba: corre en cada sesión (no cada 7 días),

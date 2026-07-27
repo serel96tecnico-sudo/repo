@@ -37,6 +37,10 @@ analizan HOY pero NO persisten (efímeros, como gappers). El núcleo `source: ma
 - **C — Suelo de ADX** (`ADX_TREND_MIN=20`): degrada a WATCH breakouts sin tendencia
   establecida (`orchestrator._apply_trend_strength_gate`).
 - **D — Confirmación multi-agente**: PENDIENTE, requiere backtest antes de cablear.
+- **Beta en descubrimiento** (`SCREENER_MIN_BETA="Over 1"`): los 4 screeners filtran nombres
+  lentos (EWS 0.53, BANC 0.74). Solo descubrimiento, no la watchlist curada; no en gappers.
+  Verificado que finvizfinance acepta el string ("Over 1"->ta_beta_o1). OJO: no caza laterales
+  de beta normal (BRKR 1.28) — eso es el filtro C (ADX).
 
 **Otros:** high_52w/low_52w ahora son de 52 semanas de verdad (scanner 45d→370d, TA 90d→1y).
 El summary del report ahora lleva prefijo `[WATCH - no accionable: motivo]` y `demotion_reason`

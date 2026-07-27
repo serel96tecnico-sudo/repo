@@ -250,6 +250,14 @@ Un setup etiquetado como breakout con **ADX < `ADX_TREND_MIN`** (20) = sin tende
 → ruptura probablemente falsa → se degrada a WATCH (motivo visible en el report). No toca
 pullbacks/reversiones (ahí un ADX bajo es normal). En `orchestrator._apply_trend_strength_gate`.
 
+### Filtro de beta en el descubrimiento
+Los 4 screeners de descubrimiento llevan `Beta: SCREENER_MIN_BETA` ("Over 1"). Coherente
+con la tesis de alta beta (§1): un nombre que apenas se mueve no da recorrido de swing
+aunque el índice se agite (EWS beta 0.53, BANC 0.74). Solo afecta al DESCUBRIMIENTO — no a
+la watchlist curada (los Tier A de baja beta se añaden a mano). No va en los gappers
+(event-driven). Cautela: la beta no caza laterales de beta normal (BRKR 1.28, volátil pero
+sin tendencia) — de eso se encarga el filtro C (ADX). En `fundamental_analyst` (filter dicts).
+
 ### Filtro D — Confirmación multi-agente (PENDIENTE)
 Exigir varias patas por encima de un suelo en vez de la media ponderada del composite. Potente
 pero **requiere backtest** antes de cablearlo (como R5/R5b) para no cortar la cola de edge.
