@@ -10,7 +10,7 @@ from config import (
     SCORE_WEIGHTS, FINAL_REPORT_N, US_MARKET_HOLIDAYS_2026,
     TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
     PORTFOLIO_VALUE, SUBTHEME_MAX_PCT, PORTFOLIO_RISK_CAP_PCT,
-    SHORT_EXTENDED_ATR_MAX, RECENT_LOSS_COOLDOWN_DAYS,
+    SHORT_EXTENDED_ATR_MAX, RECENT_LOSS_COOLDOWN_DAYS, ADX_TREND_MIN,
 )
 from utils.risk_policy import (
     build_tier_map, classify_tier, high_beta_cap, is_high_beta, is_explicitly_classified,
@@ -137,6 +137,7 @@ class TradingOrchestrator:
 
         ta_map = {t.ticker: t for t in ta_results}
         final_candidates = self._merge_and_rank(risk_results, ta_map, sentiment_map, scan_result, fund_map)
+        final_candidates = self._apply_trend_strength_gate(final_candidates)   # filtro C
         final_candidates = self._apply_recent_loss_cooldown(final_candidates, portfolio)
         final_candidates = self._apply_exposure_caps(
             final_candidates, tier_map, portfolio, market_conditions
@@ -326,30 +327,28 @@ class TradingOrchestrator:
                     f"→ {composite_raw:.1f} → {composite:.1f}"
                 )
 
+            demote_reason = ""
             if is_short and getattr(risk, "entry_extended", False):
                 rec = "WATCH"
-                self.logger.info(
-                    f"  {ticker}: SHORT demoted to WATCH — R4 guard "
-                    f"(sobre-extendido: rebote-entrada >{SHORT_EXTENDED_ATR_MAX} ATR sobre precio)"
+                demote_reason = (
+                    f"R4: short sobre-extendido (rebote-entrada >{SHORT_EXTENDED_ATR_MAX} ATR sobre precio)"
                 )
+                self.logger.info(f"  {ticker}: SHORT demoted to WATCH — R4 guard ({demote_reason})")
             elif is_short and block_short:
                 rec = "WATCH"
-                self.logger.info(
-                    f"  {ticker}: SHORT demoted to WATCH — blocked "
-                    f"(mercado claramente alcista, no abrir cortos)"
-                )
+                demote_reason = "R4: cortos bloqueados (mercado claramente alcista)"
+                self.logger.info(f"  {ticker}: SHORT demoted to WATCH — blocked ({demote_reason})")
             elif is_short and composite < short_min_score:
                 rec = "WATCH"
-                self.logger.info(
-                    f"  {ticker}: SHORT demoted to WATCH — regime filter "
-                    f"(score {composite:.1f} < min {short_min_score:.1f})"
-                )
+                demote_reason = f"filtro de régimen: score {composite:.1f} < mín corto {short_min_score:.1f}"
+                self.logger.info(f"  {ticker}: SHORT demoted to WATCH — regime filter ({demote_reason})")
             elif composite >= 7.5:
                 rec = "STRONG SELL" if is_short else "STRONG BUY"
             elif composite >= 6.0:
                 rec = "SELL" if is_short else "BUY"
             else:
                 rec = "WATCH"
+                demote_reason = f"score {composite:.1f} < 6.0 (umbral de compra)"
 
             final.append(
                 FinalCandidate(
@@ -363,6 +362,7 @@ class TradingOrchestrator:
                     fundamental_data=fund,
                     sentiment_data=sent,
                     risk_data=risk,
+                    demotion_reason=demote_reason,
                 )
             )
 
@@ -489,10 +489,41 @@ class TradingOrchestrator:
                 )
         return final
 
+    def _apply_trend_strength_gate(self, final) -> list:
+        """Filtro C — Suelo de ADX para breakouts.
+
+        Un setup etiquetado como breakout necesita tendencia establecida (ADX ≥
+        ADX_TREND_MIN); por debajo, las rupturas son mayormente falsas (caso ARDT
+        2026-07-27: 'breakout limpio' con ADX 14). Degrada a WATCH solo los
+        BUY/STRONG BUY/SELL/STRONG SELL cuyo patrón/gatillo sea de ruptura y cuyo
+        ADX quede corto. NO toca pullbacks ni reversiones (ahí un ADX bajo es normal).
+        """
+        if not final:
+            return final
+
+        for fc in final:
+            if fc.recommendation not in ("BUY", "STRONG BUY", "SELL", "STRONG SELL"):
+                continue
+            ta = fc.ta_data
+            if not ta:
+                continue
+            pattern = f"{getattr(ta, 'pattern_detected', '')} {getattr(ta, 'entry_trigger', '')}".lower()
+            if "breakout" not in pattern and "ruptura" not in pattern:
+                continue
+            adx = (ta.indicators or {}).get("adx_14") or 0
+            if adx < ADX_TREND_MIN:
+                self._demote(
+                    fc,
+                    f"filtro C: breakout con ADX {adx:.0f} < {ADX_TREND_MIN} (sin tendencia establecida)"
+                )
+        return final
+
     def _demote(self, fc, reason: str):
         fc.recommendation = "WATCH"
-        note = f"[{reason}]"
-        fc.summary = (fc.summary + " " + note).strip() if fc.summary else note
+        # Se guarda en demotion_reason (no en summary): el ReportWriter sobrescribe
+        # summary después, así que una nota puesta aquí se perdería. El ReportWriter
+        # lee demotion_reason para anteponer la cabecera de veredicto.
+        fc.demotion_reason = (fc.demotion_reason + "; " + reason).strip("; ") if fc.demotion_reason else reason
         self.logger.info(f"  {fc.ticker}: degradado a WATCH — {reason}")
 
     def _should_run_today(self) -> bool:

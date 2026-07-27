@@ -48,7 +48,11 @@ class ReportWriter(BaseAgent):
         for i, fc in enumerate(top):
             fc.rank = i + 1
             if i < len(summaries):
-                fc.summary = summaries[i]
+                # Cabecera de veredicto determinista: garantiza que un WATCH SIEMPRE
+                # se lea como "no accionable" con su motivo, aunque la narrativa de
+                # Claude (o el fallback) suene alcista. Evita que la prosa sobrevenda
+                # respecto al veredicto real del motor.
+                fc.summary = self._verdict_prefix(fc) + summaries[i]
 
         report_text = self._format_report_text(top, market, today, elapsed, total_scanned, total_analyzed, file_suffix)
 
@@ -101,8 +105,15 @@ class ReportWriter(BaseAgent):
                 )
                 if fund.risk_flags:
                     fund_line += f" | Flags: {', '.join(fund.risk_flags)}"
+            watch_line = ""
+            if fc.recommendation == "WATCH":
+                motivo = getattr(fc, "demotion_reason", "") or "score por debajo del umbral de compra"
+                watch_line = (
+                    f"\nVEREDICTO: WATCH — NO accionable hoy. Motivo: {motivo}. "
+                    f"Escribe la narrativa en tono de OBSERVACIÓN (no de compra): qué falta para que sea accionable."
+                )
             candidates_text += f"""
---- SETUP {i}: {fc.ticker} ({fc.company_name}) | Score: {fc.composite_score:.1f} | {fc.recommendation} ---
+--- SETUP {i}: {fc.ticker} ({fc.company_name}) | Score: {fc.composite_score:.1f} | {fc.recommendation} ---{watch_line}
 Current Price: {current_px} | Pattern: {ta.pattern_detected if ta else 'N/A'} | Entry trigger: {ta.entry_trigger if ta else 'N/A'}
 Entry: ${risk.entry_price:.2f} | Stop: ${risk.stop_loss:.2f} | T1: ${risk.target_1:.2f} | T2: ${risk.target_2:.2f}
 R:R: {risk.rr_ratio_1:.1f}:1 | Hold: {risk.holding_days_estimate}
@@ -117,6 +128,11 @@ BTC: ${market.btc_price:,.0f} ({market.btc_change_pct:+.2f}%) | ETH: ${market.et
 
 Escribe una narrativa de 2-3 frases en ESPAÑOL para cada uno de estos {len(candidates)} setups de swing trade.
 Explica: (1) por qué esta acción está en setup ahora, (2) qué vigilar para la entrada, (3) riesgo clave.
+
+IMPORTANTE — calibra el tono al VEREDICTO: para un BUY/STRONG BUY (o SELL/STRONG SELL) sí es una
+oportunidad accionable. Para un WATCH NO lo es: NO lo describas como compra; escríbelo como una acción
+en observación, di explícitamente que aún no se entra y qué condición falta para que sea accionable
+(el motivo va indicado en su línea VEREDICTO). No exageres la convicción por encima del veredicto.
 
 {candidates_text}
 
@@ -146,6 +162,19 @@ Narrativa del setup 2 en una sola línea continua sin saltos de línea.
             ai = parts[i] if i < len(parts) else ""
             out.append(ai if ai else fallbacks[i])
         return out
+
+    @staticmethod
+    def _verdict_prefix(fc) -> str:
+        """Prefijo determinista que antepone el veredicto a la narrativa. Solo
+        marca los WATCH (el caso problemático): un WATCH nunca debe leerse como
+        compra. Las recomendaciones accionables ya llevan su etiqueta en la
+        cabecera del setup, así que no se les añade ruido."""
+        if fc.recommendation == "WATCH":
+            motivo = getattr(fc, "demotion_reason", "") or "score por debajo del umbral de compra"
+            # Marcador ASCII-safe (no emoji): el repo ha tenido crashes de stdout
+            # cp1252 en Windows; ⚠/emojis no están en cp1252 y romperían un print.
+            return f"[WATCH - no accionable: {motivo}] "
+        return ""
 
     def _fallback_summary(self, fc) -> str:
         """Narrativa determinista construida desde los datos del setup (sin LLM).
@@ -212,6 +241,19 @@ Narrativa del setup 2 en una sola línea continua sin saltos de línea.
             f"TOP {len(candidates)} SWING TRADE CANDIDATES",
             "=" * 60,
         ]
+
+        # Filtro A (2026-07-27): si nada supera el umbral accionable (todos WATCH),
+        # el titular es "sin setups accionables" — evita que WATCH de relleno se lea
+        # como picks y desincentiva el overtrading en días débiles.
+        ACTIONABLE = {"BUY", "STRONG BUY", "SELL", "STRONG SELL"}
+        if candidates and not any(fc.recommendation in ACTIONABLE for fc in candidates):
+            lines += [
+                "",
+                "*** SIN SETUPS ACCIONABLES HOY ***",
+                f"Ninguno de los {len(candidates)} nombres supera el umbral de compra; todos",
+                "quedan EN OBSERVACION (WATCH). Lo prudente es NO abrir posiciones nuevas hoy.",
+                "Se listan abajo solo para seguimiento, no como recomendacion.",
+            ]
 
         for fc in candidates:
             ta = fc.ta_data

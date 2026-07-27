@@ -8,7 +8,10 @@ from pathlib import Path
 
 from agents.base_agent import BaseAgent
 from models.schemas import ScanCandidate, FundamentalResult
-from config import EARNINGS_BLOCK_DAYS, FUNDAMENTAL_TOP_N, CONTEXT_DIR
+from config import (
+    EARNINGS_BLOCK_DAYS, EARNINGS_HOLD_BLOCK_DAYS, FUNDAMENTAL_TOP_N, CONTEXT_DIR,
+    WATCHLIST_PROMOTE_MIN_FUND, WATCHLIST_MAX_SIZE,
+)
 
 CACHE_TTL_DAYS          = 7   # días antes de refrescar datos fundamentales
 EARNINGS_REFRESH_DAYS   = 14  # siempre refresca si earnings en menos de X días
@@ -316,7 +319,7 @@ class FundamentalAnalyst(BaseAgent):
         return data
 
     @staticmethod
-    def _scrape_finviz_screener(filters: dict, limit: int) -> list:
+    def _scrape_finviz_screener(filters: dict, limit: int, order: str = "-change") -> list:
         """Devuelve la lista de tickers de un screener de Finviz.
 
         No usa Overview.screener_view() de finvizfinance 1.3.0: con el layout
@@ -333,6 +336,15 @@ class FundamentalAnalyst(BaseAgent):
         Se reutiliza Overview solo para traducir filters_dict -> params de URL,
         y la sesión de finvizfinance (cookie/UA/proxy/timeout), igual que
         `_scrape_finviz_quote`.
+
+        `order` es el token de orden de Finviz (`o=`). NUNCA usar "ticker"
+        (alfabético): con `limit` pequeño, el screener solo cosecha AA/AB/AC... y
+        la rotación one-in-one-out degeneraba la watchlist a A-F (jul-2026). Se
+        ordena por movimiento del día — "-change" (mayores subidas) para largos,
+        "change" (mayores caídas) para cortos — para sacar los movers reales, no
+        los primeros del abecedario. OJO: un token inválido hace que Finviz caiga
+        al orden por defecto (por ticker), reintroduciendo el sesgo; usar solo
+        tokens canónicos verificados ("change", "-change", "volume", "-volume").
         """
         import finvizfinance.util as fv_util
         from finvizfinance.screener.overview import Overview
@@ -342,7 +354,7 @@ class FundamentalAnalyst(BaseAgent):
         overview = Overview()
         overview.set_filter(filters_dict=filters)
         params = dict(overview.request_params)
-        params["o"] = "ticker"  # orden ascendente por ticker
+        params["o"] = order
 
         tickers, seen = [], set()
         for offset in range(1, limit + 1, Overview.size):
@@ -406,11 +418,14 @@ class FundamentalAnalyst(BaseAgent):
         block_reason = ""
 
         # --- Block conditions ---
-        if 0 < days_to_earn <= EARNINGS_BLOCK_DAYS:
+        # Filtro B: bloquea si el earnings cae dentro de la ventana de hold
+        # (EARNINGS_HOLD_BLOCK_DAYS ⊇ EARNINGS_BLOCK_DAYS). Sostener durante el
+        # reporte = riesgo binario de gap ingestionable con stop. Se cuenta también
+        # earnings hoy (days_to_earn == 0).
+        earn_block_days = max(EARNINGS_BLOCK_DAYS, EARNINGS_HOLD_BLOCK_DAYS)
+        if 0 <= days_to_earn <= earn_block_days:
             blocked = True
-            block_reason = f"Earnings in {days_to_earn}d ({earnings_str})"
-        elif 0 < days_to_earn <= 5:
-            risk_flags.append(f"earnings_imminent ({earnings_str})")
+            block_reason = f"Earnings en {days_to_earn}d ({earnings_str}) dentro de la ventana de hold"
 
         # --- Fundamental score (0-10) ---
         score = 5.0
@@ -497,16 +512,22 @@ class FundamentalAnalyst(BaseAgent):
         sesión: ver la nota en `run()` sobre por qué no encarece la ejecución.
         """
         new_candidates = []
+        promotable = []   # solo candidatos de CALIDAD que pueden entrar en la watchlist
+        # order: "-change" saca los mayores movers al alza (largos), "change" los
+        # mayores a la baja (cortos). NUNCA "ticker" — ver _scrape_finviz_screener.
+        # promotes: si el hallazgo puede PERSISTIR en la watchlist. Solo el screener
+        # fundamental de calidad (long_screener) promociona; momentum/técnicos y
+        # cortos son efímeros (un buen día no basta para entrar — ver config).
         configs = [
-            (LONG_SCREENER_FILTERS,        8, "long_screener"),
-            (SHORT_SCREENER_FILTERS,        5, "short_screener"),
-            (TA_WEEKLY_LONG_FILTERS,       10, "ta_weekly_long"),
-            (TA_MONTHLY_BREAKOUT_FILTERS,   8, "ta_monthly_breakout"),
+            (LONG_SCREENER_FILTERS,        8, "long_screener",      "-change", True),
+            (SHORT_SCREENER_FILTERS,        5, "short_screener",     "change",  False),
+            (TA_WEEKLY_LONG_FILTERS,       10, "ta_weekly_long",     "-change", False),
+            (TA_MONTHLY_BREAKOUT_FILTERS,   8, "ta_monthly_breakout", "-change", False),
         ]
 
-        for filters, limit, label in configs:
+        for filters, limit, label, order, promotes in configs:
             try:
-                for ticker in self._scrape_finviz_screener(filters, limit):
+                for ticker in self._scrape_finviz_screener(filters, limit, order):
                     if ticker in existing_tickers:
                         continue
                     try:
@@ -519,7 +540,7 @@ class FundamentalAnalyst(BaseAgent):
                             continue
                         fund_map[ticker] = result
                         existing_tickers.add(ticker)
-                        new_candidates.append(ScanCandidate(
+                        cand = ScanCandidate(
                             ticker=ticker,
                             company_name=fdata.get("Company", ticker),
                             sector=fdata.get("Sector", "Unknown"),
@@ -532,7 +553,12 @@ class FundamentalAnalyst(BaseAgent):
                             low_52w=price,
                             scan_signals=[label],
                             initial_score=result.fundamental_score * 0.5,
-                        ))
+                        )
+                        new_candidates.append(cand)
+                        # Puerta de calidad: promociona a la watchlist solo si el
+                        # screener es de calidad Y el fundamental supera el suelo.
+                        if promotes and result.fundamental_score >= WATCHLIST_PROMOTE_MIN_FUND:
+                            promotable.append(cand)
                         self.logger.info(f"  Screener new: {ticker} (score {result.fundamental_score})")
                         time.sleep(0.35)
                     except Exception:
@@ -541,8 +567,8 @@ class FundamentalAnalyst(BaseAgent):
             except Exception as e:
                 self.logger.warning(f"Screener {label} failed: {e}")
 
-        if new_candidates:
-            self._update_watchlist(new_candidates)
+        if promotable:
+            self._update_watchlist(promotable)
 
         return new_candidates
 
@@ -557,14 +583,16 @@ class FundamentalAnalyst(BaseAgent):
             return []
 
         new_candidates = []
+        # -change: mayores gaps al alza primero (largos); change: mayores gaps a
+        # la baja primero (cortos). Sin esto Finviz ordenaba por ticker (sesgo A-F).
         configs = [
-            (GAPPERS_LONG_FILTERS,  "gapper_long",  "long"),
-            (GAPPERS_SHORT_FILTERS, "gapper_short", "short"),
+            (GAPPERS_LONG_FILTERS,  "gapper_long",  "long",  "-change"),
+            (GAPPERS_SHORT_FILTERS, "gapper_short", "short", "change"),
         ]
 
-        for filters, label, direction in configs:
+        for filters, label, direction, order in configs:
             try:
-                for ticker in self._scrape_finviz_screener(filters, GAPPERS_LIMIT):
+                for ticker in self._scrape_finviz_screener(filters, GAPPERS_LIMIT, order):
                     if ticker in existing_tickers:
                         continue
                     try:
@@ -609,9 +637,18 @@ class FundamentalAnalyst(BaseAgent):
 
         return new_candidates
 
+    # Orígenes protegidos: el núcleo curado por el operador NUNCA se expulsa.
+    _PROTECTED_SOURCES = {"manual", "core", "seed", None}
+
     def _update_watchlist(self, new_candidates: list) -> None:
-        """One-in one-out sobre el pool completo (sin distinción de origen).
-        Añade N tickers nuevos y elimina los N más antiguos para mantener el tamaño."""
+        """Promoción a la watchlist con puerta de calidad y NÚCLEO PROTEGIDO.
+
+        `new_candidates` ya viene filtrado a candidatos de calidad (ver _run_screener:
+        solo long_screener con fundamental_score alto). La rotación mantiene el tamaño
+        bajo `WATCHLIST_MAX_SIZE` reciclando solo entradas AUTO-AÑADIDAS más antiguas;
+        el núcleo curado (source: manual) es intocable. Así un buen día no desplaza a
+        un buen ticker, y la lista no vuelve a degenerar.
+        """
         watchlist_path = Path(CONTEXT_DIR) / "watchlist.json"
         try:
             data = json.loads(watchlist_path.read_text(encoding="utf-8"))
@@ -640,13 +677,25 @@ class FundamentalAnalyst(BaseAgent):
             existing.add(c.ticker)
             added.append(c.ticker)
 
-        # One-in one-out: por cada entrada nueva, elimina la más antigua
+        if not added:
+            return
+
+        # Recorte por cap: solo si superamos WATCHLIST_MAX_SIZE, y expulsando las
+        # entradas AUTO-AÑADIDAS más antiguas (nunca el núcleo curado). Si no hay
+        # auto-añadidas que reciclar, se deja crecer antes que tocar un nombre manual.
         removed = []
-        if added:
-            entries.sort(key=lambda e: e["added"])
-            for _ in added:
-                if len(entries) > len(added):  # no vaciar la lista
-                    removed.append(entries.pop(0)["ticker"])
+        overflow = len(entries) - WATCHLIST_MAX_SIZE
+        if overflow > 0:
+            added_set = set(added)   # nunca reciclar lo recién promocionado
+            auto_oldest = sorted(
+                (e for e in entries
+                 if e.get("source") not in self._PROTECTED_SOURCES and e["ticker"] not in added_set),
+                key=lambda e: (e.get("added", ""), e["ticker"]),
+            )
+            remove = {e["ticker"] for e in auto_oldest[:overflow]}
+            if remove:
+                entries = [e for e in entries if e["ticker"] not in remove]
+                removed = list(remove)
 
         data["entries"] = entries
         data["tickers"] = [e["ticker"] for e in entries]
@@ -657,8 +706,8 @@ class FundamentalAnalyst(BaseAgent):
         os.replace(tmp, watchlist_path)
 
         self.logger.info(
-            f"  Watchlist: +{len(added)} ({', '.join(added) or 'ninguno'})"
-            + (f" | -{len(removed)} oldest ({', '.join(removed)})" if removed else "")
+            f"  Watchlist: +{len(added)} calidad ({', '.join(added)})"
+            + (f" | -{len(removed)} auto-antiguos ({', '.join(removed)})" if removed else "")
         )
 
     # ------------------------------------------------------------------

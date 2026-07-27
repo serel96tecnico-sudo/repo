@@ -1,680 +1,722 @@
 {
-  "updated": "2026-07-23",
   "description": "DeGiro favourites list",
+  "updated": "2026-07-27",
   "entries": [
     {
-      "ticker": "CRWV",
-      "added": "2026-06-16",
+      "ticker": "AAPL",
+      "added": "2026-07-27",
       "source": "manual"
     },
     {
-      "ticker": "ARXS",
-      "added": "2026-06-16",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ACM",
-      "added": "2026-06-18",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ANNX",
-      "added": "2026-06-22",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "AIRJ",
-      "added": "2026-06-23",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "FTNT",
-      "added": "2026-07-09",
+      "ticker": "ADBE",
+      "added": "2026-07-27",
       "source": "manual"
     },
     {
-      "ticker": "AADX",
-      "added": "2026-07-14",
-      "source": "long_screener"
+      "ticker": "AEHR",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ABTC",
-      "added": "2026-07-14",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "AAP",
-      "added": "2026-07-14",
-      "source": "short_screener"
-    },
-    {
-      "ticker": "ABX",
-      "added": "2026-07-14",
-      "source": "short_screener"
-    },
-    {
-      "ticker": "ACHC",
-      "added": "2026-07-14",
-      "source": "short_screener"
-    },
-    {
-      "ticker": "ACHV",
-      "added": "2026-07-14",
-      "source": "short_screener"
-    },
-    {
-      "ticker": "A",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "AAPU",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "ABCB",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "ACWI",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "AEE",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "AGCO",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "ALH",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "ALSN",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "AM",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "AMBQ",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "AAXJ",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "ABEO",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "ticker": "AMAT",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
       "ticker": "AMD",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ANET",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "ticker": "ANF",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ARKG",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "ticker": "APLD",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ADAM",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
+      "ticker": "APP",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AMDL",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
+      "ticker": "ASML",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ARR",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
+      "ticker": "ASTS",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ASH",
-      "added": "2026-07-14",
-      "source": "ta_weekly_long"
+      "ticker": "AXON",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ACA",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "ticker": "AXTI",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AIRR",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "ticker": "BE",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AVLV",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "ticker": "BEAM",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AVUV",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "ticker": "BIDU",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "BAC",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "ticker": "BMNR",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "BCAT",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "ticker": "BYDDY",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "CGDG",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "ticker": "CCJ",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "CGXU",
-      "added": "2026-07-14",
-      "source": "ta_monthly_breakout"
+      "ticker": "CELH",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AAAP",
-      "added": "2026-07-16",
-      "source": "short_screener"
+      "ticker": "CIFR",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AA",
-      "added": "2026-07-16",
-      "source": "ta_weekly_long"
+      "ticker": "CLSK",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AAOI",
-      "added": "2026-07-17",
-      "source": "short_screener"
+      "ticker": "CMCSA",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AFG",
-      "added": "2026-07-17",
-      "source": "ta_weekly_long"
+      "ticker": "COST",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AIG",
-      "added": "2026-07-17",
-      "source": "ta_weekly_long"
+      "ticker": "CRCL",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ALLY",
-      "added": "2026-07-17",
-      "source": "ta_weekly_long"
+      "ticker": "CRM",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "APD",
-      "added": "2026-07-17",
-      "source": "ta_weekly_long"
+      "ticker": "CRML",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ARDT",
-      "added": "2026-07-17",
-      "source": "ta_weekly_long"
+      "ticker": "CRWD",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AVNT",
-      "added": "2026-07-17",
-      "source": "ta_weekly_long"
+      "ticker": "CRWV",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AAPL",
-      "added": "2026-07-17",
-      "source": "ta_monthly_breakout"
+      "ticker": "CVX",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ABBV",
-      "added": "2026-07-17",
-      "source": "ta_monthly_breakout"
+      "ticker": "DFDV",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ADM",
-      "added": "2026-07-17",
-      "source": "ta_monthly_breakout"
+      "ticker": "DGXX",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ATO",
-      "added": "2026-07-17",
-      "source": "ta_weekly_long"
+      "ticker": "DLO",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ACWX",
-      "added": "2026-07-17",
-      "source": "ta_monthly_breakout"
+      "ticker": "DLTR",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ADMA",
-      "added": "2026-07-17",
-      "source": "short_screener"
+      "ticker": "DPZ",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AMCX",
-      "added": "2026-07-17",
-      "source": "ta_weekly_long"
+      "ticker": "DXCM",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ATAI",
-      "added": "2026-07-17",
-      "source": "ta_monthly_breakout"
+      "ticker": "DXYZ",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AVBP",
-      "added": "2026-07-17",
-      "source": "ta_monthly_breakout"
+      "ticker": "ENSG",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "BIL",
-      "added": "2026-07-17",
-      "source": "ta_monthly_breakout"
+      "ticker": "EOS",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ACVA",
-      "added": "2026-07-20",
-      "source": "ta_weekly_long"
+      "ticker": "FIG",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AGNC",
-      "added": "2026-07-20",
-      "source": "ta_weekly_long"
+      "ticker": "FROG",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AHRT",
-      "added": "2026-07-20",
-      "source": "ta_weekly_long"
+      "ticker": "FTNT",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AME",
-      "added": "2026-07-20",
-      "source": "ta_weekly_long"
+      "ticker": "GLD",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AMGN",
-      "added": "2026-07-20",
-      "source": "ta_weekly_long"
+      "ticker": "GOOGL",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AMH",
-      "added": "2026-07-20",
-      "source": "ta_weekly_long"
+      "ticker": "GRAB",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "BUG",
-      "added": "2026-07-20",
-      "source": "ta_monthly_breakout"
+      "ticker": "HCA",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "BVS",
-      "added": "2026-07-20",
-      "source": "ta_monthly_breakout"
+      "ticker": "HCTI",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "CDNA",
-      "added": "2026-07-20",
-      "source": "ta_monthly_breakout"
+      "ticker": "HIMS",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "ADPT",
-      "added": "2026-07-20",
-      "source": "ta_weekly_long"
+      "ticker": "HUMA",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AMLX",
-      "added": "2026-07-20",
-      "source": "ta_weekly_long"
+      "ticker": "ILF",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "CGBL",
-      "added": "2026-07-20",
-      "source": "ta_monthly_breakout"
+      "ticker": "INTC",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "COWZ",
-      "added": "2026-07-20",
-      "source": "ta_monthly_breakout"
+      "ticker": "IONQ",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "EUFN",
-      "added": "2026-07-20",
-      "source": "ta_monthly_breakout"
+      "ticker": "IREN",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "EWS",
-      "added": "2026-07-20",
-      "source": "ta_monthly_breakout"
+      "ticker": "JD",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "FA",
-      "added": "2026-07-20",
-      "source": "ta_monthly_breakout"
+      "ticker": "KGC",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "FDL",
-      "added": "2026-07-20",
-      "source": "ta_monthly_breakout"
+      "ticker": "LIF",
+      "added": "2026-07-27",
+      "source": "manual"
     },
     {
-      "ticker": "AHCO",
-      "added": "2026-07-21",
+      "ticker": "LMND",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "LMT",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "LOCL",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "LULU",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "LUNR",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "LWLG",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "MARA",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "MELI",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "META",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "MNTS",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "MRAM",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "MRVL",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "MSFT",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "MU",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "MVIS",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "MXL",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "NBIS",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "NKE",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "NOK",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "NOW",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "NU",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "NVDA",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "NVO",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "OKLO",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "ONDS",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "OPEN",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "OPTT",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "ORKA",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "OSCR",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "OUST",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "PAGS",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "PANW",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "PDD",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "PEP",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "PSX",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "PZZA",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "QBTS",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "RGTI",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "RKLB",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "RXT",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "RZLV",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "SBET",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "SES",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "SIRI",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "SLNH",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "SMR",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "SNDK",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "STNE",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "TEM",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "TMDX",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "TMQ",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "TSLA",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "TSM",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "TSSI",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "UBER",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "UNH",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "UPST",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "VKTX",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "VRNS",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "WULF",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "XPEV",
+      "added": "2026-07-27",
+      "source": "manual"
+    },
+    {
+      "ticker": "VEEE",
+      "added": "2026-07-27",
       "source": "long_screener"
     },
     {
-      "ticker": "ACRS",
-      "added": "2026-07-21",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "AFL",
-      "added": "2026-07-21",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "AMN",
-      "added": "2026-07-21",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "AVEM",
-      "added": "2026-07-21",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "BANC",
-      "added": "2026-07-21",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "BRKR",
-      "added": "2026-07-21",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "ADP",
-      "added": "2026-07-21",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "AUB",
-      "added": "2026-07-21",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "ADTN",
-      "added": "2026-07-22",
-      "source": "short_screener"
-    },
-    {
-      "ticker": "AGPU",
-      "added": "2026-07-22",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "ALL",
-      "added": "2026-07-22",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "APA",
-      "added": "2026-07-22",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "BCAR",
-      "added": "2026-07-22",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "BLFS",
-      "added": "2026-07-22",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "CIBR",
-      "added": "2026-07-22",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "CLBK",
-      "added": "2026-07-22",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "DELL",
-      "added": "2026-07-22",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "AKR",
-      "added": "2026-07-22",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "BBJP",
-      "added": "2026-07-22",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "CAKE",
-      "added": "2026-07-22",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "CDP",
-      "added": "2026-07-22",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "CGUS",
-      "added": "2026-07-22",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "CHRD",
-      "added": "2026-07-22",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "ABR",
-      "added": "2026-07-23",
-      "source": "short_screener"
-    },
-    {
-      "ticker": "ACI",
-      "added": "2026-07-23",
-      "source": "short_screener"
-    },
-    {
-      "ticker": "ADC",
-      "added": "2026-07-23",
-      "source": "short_screener"
-    },
-    {
-      "ticker": "BOXX",
-      "added": "2026-07-23",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "CALF",
-      "added": "2026-07-23",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "CGGR",
-      "added": "2026-07-23",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "CINF",
-      "added": "2026-07-23",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "ABSI",
-      "added": "2026-07-23",
+      "ticker": "ADSK",
+      "added": "2026-07-27",
       "source": "long_screener"
     },
     {
-      "ticker": "ACIW",
-      "added": "2026-07-23",
+      "ticker": "ZBIO",
+      "added": "2026-07-27",
       "source": "long_screener"
-    },
-    {
-      "ticker": "ARTV",
-      "added": "2026-07-23",
-      "source": "ta_weekly_long"
-    },
-    {
-      "ticker": "BCI",
-      "added": "2026-07-23",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "BPOP",
-      "added": "2026-07-23",
-      "source": "ta_monthly_breakout"
-    },
-    {
-      "ticker": "CGGO",
-      "added": "2026-07-23",
-      "source": "ta_monthly_breakout"
     }
   ],
   "tickers": [
-    "CRWV",
-    "ARXS",
-    "ACM",
-    "ANNX",
-    "AIRJ",
-    "FTNT",
-    "AADX",
-    "ABTC",
-    "AAP",
-    "ABX",
-    "ACHC",
-    "ACHV",
-    "A",
-    "AAPU",
-    "ABCB",
-    "ACWI",
-    "AEE",
-    "AGCO",
-    "ALH",
-    "ALSN",
-    "AM",
-    "AMBQ",
-    "AAXJ",
-    "ABEO",
-    "AMD",
-    "ANET",
-    "ARKG",
-    "ADAM",
-    "AMDL",
-    "ARR",
-    "ASH",
-    "ACA",
-    "AIRR",
-    "AVLV",
-    "AVUV",
-    "BAC",
-    "BCAT",
-    "CGDG",
-    "CGXU",
-    "AAAP",
-    "AA",
-    "AAOI",
-    "AFG",
-    "AIG",
-    "ALLY",
-    "APD",
-    "ARDT",
-    "AVNT",
     "AAPL",
-    "ABBV",
-    "ADM",
-    "ATO",
-    "ACWX",
-    "ADMA",
-    "AMCX",
-    "ATAI",
-    "AVBP",
-    "BIL",
-    "ACVA",
-    "AGNC",
-    "AHRT",
-    "AME",
-    "AMGN",
-    "AMH",
-    "BUG",
-    "BVS",
-    "CDNA",
-    "ADPT",
-    "AMLX",
-    "CGBL",
-    "COWZ",
-    "EUFN",
-    "EWS",
-    "FA",
-    "FDL",
-    "AHCO",
-    "ACRS",
-    "AFL",
-    "AMN",
-    "AVEM",
-    "BANC",
-    "BRKR",
-    "ADP",
-    "AUB",
-    "ADTN",
-    "AGPU",
-    "ALL",
-    "APA",
-    "BCAR",
-    "BLFS",
-    "CIBR",
-    "CLBK",
-    "DELL",
-    "AKR",
-    "BBJP",
-    "CAKE",
-    "CDP",
-    "CGUS",
-    "CHRD",
-    "ABR",
-    "ACI",
-    "ADC",
-    "BOXX",
-    "CALF",
-    "CGGR",
-    "CINF",
-    "ABSI",
-    "ACIW",
-    "ARTV",
-    "BCI",
-    "BPOP",
-    "CGGO"
+    "ADBE",
+    "AEHR",
+    "AMAT",
+    "AMD",
+    "ANF",
+    "APLD",
+    "APP",
+    "ASML",
+    "ASTS",
+    "AXON",
+    "AXTI",
+    "BE",
+    "BEAM",
+    "BIDU",
+    "BMNR",
+    "BYDDY",
+    "CCJ",
+    "CELH",
+    "CIFR",
+    "CLSK",
+    "CMCSA",
+    "COST",
+    "CRCL",
+    "CRM",
+    "CRML",
+    "CRWD",
+    "CRWV",
+    "CVX",
+    "DFDV",
+    "DGXX",
+    "DLO",
+    "DLTR",
+    "DPZ",
+    "DXCM",
+    "DXYZ",
+    "ENSG",
+    "EOS",
+    "FIG",
+    "FROG",
+    "FTNT",
+    "GLD",
+    "GOOGL",
+    "GRAB",
+    "HCA",
+    "HCTI",
+    "HIMS",
+    "HUMA",
+    "ILF",
+    "INTC",
+    "IONQ",
+    "IREN",
+    "JD",
+    "KGC",
+    "LIF",
+    "LMND",
+    "LMT",
+    "LOCL",
+    "LULU",
+    "LUNR",
+    "LWLG",
+    "MARA",
+    "MELI",
+    "META",
+    "MNTS",
+    "MRAM",
+    "MRVL",
+    "MSFT",
+    "MU",
+    "MVIS",
+    "MXL",
+    "NBIS",
+    "NKE",
+    "NOK",
+    "NOW",
+    "NU",
+    "NVDA",
+    "NVO",
+    "OKLO",
+    "ONDS",
+    "OPEN",
+    "OPTT",
+    "ORKA",
+    "OSCR",
+    "OUST",
+    "PAGS",
+    "PANW",
+    "PDD",
+    "PEP",
+    "PSX",
+    "PZZA",
+    "QBTS",
+    "RGTI",
+    "RKLB",
+    "RXT",
+    "RZLV",
+    "SBET",
+    "SES",
+    "SIRI",
+    "SLNH",
+    "SMR",
+    "SNDK",
+    "STNE",
+    "TEM",
+    "TMDX",
+    "TMQ",
+    "TSLA",
+    "TSM",
+    "TSSI",
+    "UBER",
+    "UNH",
+    "UPST",
+    "VKTX",
+    "VRNS",
+    "WULF",
+    "XPEV",
+    "VEEE",
+    "ADSK",
+    "ZBIO"
   ]
 }

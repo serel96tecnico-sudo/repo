@@ -213,3 +213,43 @@ Test sobre **196 recomendaciones reales** extraídas de 46 ficheros `daily_state
 - **Cortos = el edge más fiable:** win 51.3% con media positiva, vs longs 37.5% (que dependen de los pelotazos). Confirma los trades cerrados (cortos 6/7).
 
 **Implicación operativa:** los datos validan esta spec. No tocar indicadores; **proteger la cola** (R1/R2) y **no cortar ganadores pronto** es lo que sostiene la rentabilidad. Pendiente clave: el test cubre un solo régimen (Uptrend/NEUTRAL); falta saber si el edge aguanta en Downtrend.
+
+---
+
+## 8. Filtros de calidad de selección y política de watchlist (2026-07-27)
+
+Motivación: un análisis reveló que el pipeline solo recomendaba tickers A-F. Causa raíz
+doble — el screener de descubrimiento ordenaba alfabéticamente (`o=ticker`, corregido a
+orden por movimiento del día) y la rotación one-in-one-out persistía momentum y expulsaba
+el núcleo curado, degenerando la watchlist. Al hilo, se añadieron filtros de calidad que el
+operador aprobó. **Decisiones del operador, no defaults — no revertir sin acordarlo.**
+
+### Política de watchlist — crecimiento con puerta de CALIDAD
+> *"La misión de la watchlist es almacenar buenos tickers y operar con ellos. Un ticker malo
+> no lo queremos aunque un día se comporte bien: un buen día no basta para entrar."*
+
+- Solo el **`long_screener`** (analyst Strong Buy + insider comprando) puede **promocionar** a
+  la watchlist, y solo si `fundamental_score >= WATCHLIST_PROMOTE_MIN_FUND` (7.0).
+- Los screeners de **momentum/técnicos** (`ta_weekly_long`, `ta_monthly_breakout`) y `short_screener`
+  descubren candidatos para analizar **HOY** pero **NO persisten** (efímeros, como los gappers).
+- El **núcleo curado** (`source: manual`) **nunca** se expulsa; la rotación solo recicla entradas
+  auto-añadidas por encima de `WATCHLIST_MAX_SIZE` (120). Lógica en `fundamental_analyst._update_watchlist`.
+
+### Filtro A — Suelo de score absoluto (anti-overtrading)
+Si ningún candidato es accionable (todos WATCH), el informe titula **"SIN SETUPS ACCIONABLES
+HOY"** en vez de presentar WATCH de relleno como si fueran picks. El umbral accionable sigue
+siendo ≥6.0 (validado en §7). En `report_writer._format_report_text`.
+
+### Filtro B — Earnings dentro de la ventana de hold
+El bloqueo por earnings se extiende de ≤`EARNINGS_BLOCK_DAYS` (3d) a cubrir el hold estimado
+(5-10 sesiones): `EARNINGS_HOLD_BLOCK_DAYS` = 12 días naturales. Sostener durante el reporte es
+riesgo binario de gap, ingestionable con stop. En `fundamental_analyst._build_result`.
+
+### Filtro C — Suelo de ADX para breakouts
+Un setup etiquetado como breakout con **ADX < `ADX_TREND_MIN`** (20) = sin tendencia establecida
+→ ruptura probablemente falsa → se degrada a WATCH (motivo visible en el report). No toca
+pullbacks/reversiones (ahí un ADX bajo es normal). En `orchestrator._apply_trend_strength_gate`.
+
+### Filtro D — Confirmación multi-agente (PENDIENTE)
+Exigir varias patas por encima de un suelo en vez de la media ponderada del composite. Potente
+pero **requiere backtest** antes de cablearlo (como R5/R5b) para no cortar la cola de edge.

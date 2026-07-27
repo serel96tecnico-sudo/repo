@@ -332,10 +332,15 @@ class MarketDataFetcher:
             from alpaca.data.requests import StockBarsRequest
             from alpaca.data.timeframe import TimeFrame
 
+            # 370 días naturales ≈ 252 sesiones ≈ 52 semanas: necesario para que
+            # high_52w/low_52w sean de VERDAD de 52 semanas. Antes se pedían 45
+            # días, así que "near_52w_high" era en realidad "near 45-day high"
+            # (señal mal etiquetada). avg_vol usa .tail(20) y change_pct usa las
+            # dos últimas velas, así que la ventana más larga no los altera.
             request = StockBarsRequest(
                 symbol_or_symbols=tickers,
                 timeframe=TimeFrame.Day,
-                start=datetime.now() - timedelta(days=45),
+                start=datetime.now() - timedelta(days=370),
                 end=datetime.now(),
                 feed="iex",
             )
@@ -349,6 +354,8 @@ class MarketDataFetcher:
                     price = float(t_df["close"].iloc[-1])
                     prev = float(t_df["close"].iloc[-2])
                     avg_vol = float(t_df["volume"].tail(20).mean()) if len(t_df) >= 20 else float(t_df["volume"].mean())
+                    # máx/mín de ~52 semanas (o de toda la vida del valor si cotiza
+                    # menos de un año, p. ej. IPOs recientes — el mejor proxy posible)
                     results[ticker] = {
                         "price": price,
                         "prev_price": prev,
@@ -371,7 +378,9 @@ class MarketDataFetcher:
         batches = [tickers[i:i + batch_size] for i in range(0, len(tickers), batch_size)]
         for i, batch in enumerate(batches):
             try:
-                raw = yf.download(batch, period="30d", auto_adjust=True, progress=False, threads=True)
+                # 1y para que high_52w/low_52w sean reales de 52 semanas (igual que
+                # la ruta Alpaca); avg_vol/change solo miran las últimas velas.
+                raw = yf.download(batch, period="1y", auto_adjust=True, progress=False, threads=True)
                 if raw.empty:
                     continue
                 close = raw["Close"] if "Close" in raw else raw.xs("Close", axis=1, level=0)

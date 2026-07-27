@@ -9,6 +9,41 @@
 
 ---
 
+## 2026-07-27 — Fix sesgo A-F + filtros de calidad (NO revertir)
+
+Diagnóstico: el pipeline solo recomendaba tickers A-F. Causa raíz doble, ya corregida:
+
+1. **Sesgo del screener de descubrimiento** — `_scrape_finviz_screener` ordenaba `o=ticker`
+   (alfabético) y cogía los primeros N → siempre cosechaba AA/AB/AC. Ahora ordena por
+   movimiento del día (`-change` largos / `change` cortos), configurable por screener.
+   OJO: un token `o=` inválido hace que Finviz caiga al orden por defecto (ticker) y
+   reintroduce el sesgo — usar solo tokens verificados.
+2. **La rotación one-in-one-out** persistía momentum en la watchlist y expulsaba el núcleo
+   curado por antigüedad → la lista degeneró a A-F (0 supervivientes manuales el 27/07).
+   Watchlist restaurada desde `4bdec2b` (108 tickers, A-X, 100 manuales).
+
+**Nueva política de watchlist (decisión operador): crecimiento con puerta de CALIDAD.**
+La watchlist almacena buenos tickers, no nombres que tuvieron un buen día. Solo el
+`long_screener` (analyst Strong Buy + insider) promociona, y solo con
+`fundamental_score >= WATCHLIST_PROMOTE_MIN_FUND` (7.0). Momentum/técnicos/cortos se
+analizan HOY pero NO persisten (efímeros, como gappers). El núcleo `source: manual`
+**nunca** se expulsa; la rotación solo recicla auto-añadidos por encima de `WATCHLIST_MAX_SIZE` (120).
+
+**Filtros de selección nuevos (config.py, doc en estrategia_riesgo.md §8):**
+- **A — Suelo de score absoluto**: si nada es accionable (todo WATCH), el report titula
+  "SIN SETUPS ACCIONABLES HOY" en vez de emitir WATCH de relleno (anti-overtrading).
+- **B — Earnings dentro del hold** (`EARNINGS_HOLD_BLOCK_DAYS=12`): bloquea si el earnings
+  cae en la ventana de hold (5-10 sesiones), no solo ≤3d. Riesgo binario de gap.
+- **C — Suelo de ADX** (`ADX_TREND_MIN=20`): degrada a WATCH breakouts sin tendencia
+  establecida (`orchestrator._apply_trend_strength_gate`).
+- **D — Confirmación multi-agente**: PENDIENTE, requiere backtest antes de cablear.
+
+**Otros:** high_52w/low_52w ahora son de 52 semanas de verdad (scanner 45d→370d, TA 90d→1y).
+El summary del report ahora lleva prefijo `[WATCH - no accionable: motivo]` y `demotion_reason`
+sobrevive al ReportWriter (antes el texto sonaba a compra con veredicto WATCH).
+
+---
+
 ## Workflow "cierre del día"
 
 Cuando el operador manda capturas de sus brokers y dice **"cierre del día"**, actualizar a mano dos ficheros en `contex/`:

@@ -197,6 +197,10 @@ class FinalCandidate:
     risk_data: RiskResult = None
     summary: str = ""
     current_price: float = 0.0
+    # Motivo por el que la recomendación se degradó a WATCH (R1/R2/R4/R6/R7 o
+    # score/régimen). Campo propio para que NO lo pise el ReportWriter al
+    # sobrescribir `summary`; se usa para calibrar el tono de la narrativa.
+    demotion_reason: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -206,6 +210,7 @@ class FinalCandidate:
             "composite_score": self.composite_score,
             "recommendation": self.recommendation,
             "current_price": self.current_price,
+            "demotion_reason": self.demotion_reason,
             "scan_data": self.scan_data.to_dict() if self.scan_data else None,
             "ta_data": self.ta_data.to_dict() if self.ta_data else None,
             "fundamental_data": self.fundamental_data.to_dict() if self.fundamental_data else None,

@@ -40,7 +40,24 @@ TA_TOP_N = 15
 SENTIMENT_TOP_N = 10
 RISK_TOP_N = 10
 FINAL_REPORT_N = 4
-EARNINGS_BLOCK_DAYS = 3
+EARNINGS_BLOCK_DAYS = 3        # earnings inminente: siempre fuera
+# Filtro B (2026-07-27): bloquea earnings DENTRO de la ventana de hold. El hold
+# estimado es 5-10 sesiones (~14 días naturales); sostener una posición durante el
+# reporte es riesgo binario de gap, imposible de gestionar con un stop normal.
+# 12 días naturales cubren el grueso del hold sin vaciar el pool en plena temporada
+# de resultados. Tunable por el operador.
+EARNINGS_HOLD_BLOCK_DAYS = 12
+
+# Watchlist — política de crecimiento con puerta de CALIDAD (2026-07-27).
+# La watchlist almacena "buenos tickets" para operar, no nombres que tuvieron un
+# buen día. Los screeners de momentum/técnicos (ta_weekly_long, ta_monthly_breakout,
+# short_screener) descubren candidatos para analizar HOY pero NO se persisten (son
+# efímeros, como los gappers). Solo el screener fundamental de calidad (long_screener:
+# analyst Strong Buy + insider comprando) puede PROMOCIONAR a la watchlist, y solo si
+# supera este suelo de fundamental_score. El núcleo curado (source: manual) nunca se
+# expulsa: la rotación one-in-one-out solo recicla entradas auto-añadidas.
+WATCHLIST_PROMOTE_MIN_FUND = 7.0
+WATCHLIST_MAX_SIZE = 130
 
 MIN_PRICE = 1.0
 MAX_PRICE = 5000.0
@@ -51,6 +68,12 @@ NEAR_52W_HIGH_PCT = 0.85
 
 RSI_OVERSOLD = 30
 RSI_OVERBOUGHT = 70
+
+# Filtro C (2026-07-27): suelo de fuerza de tendencia para setups de breakout.
+# ADX < 20 = sin tendencia establecida → las rupturas son mayormente falsas. Un
+# largo/corto etiquetado como breakout con ADX por debajo de este umbral se degrada
+# a WATCH (no se opera la ruptura sin inercia real). No afecta a pullbacks/reversiones.
+ADX_TREND_MIN = 20
 
 # MA200 multi-timeframe (tendencia mayor). "media de 200 sesiones" = SMA200.
 # El TecnicalAnalyst la calcula en semanal/diario/4h y la inyecta en score+prompt.

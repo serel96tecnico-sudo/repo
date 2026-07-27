@@ -68,7 +68,11 @@ class TechnicalAnalyst(BaseAgent):
 
     def _analyze_single(self, candidate: ScanCandidate, today: str) -> TAResult:
         try:
-            df = self.data_fetcher.fetch_ohlcv(candidate.ticker, period="90d")
+            # 1y (no 90d): indicators.py calcula high_52w/low_52w con .tail(252)
+            # (252 sesiones = 52 semanas); con 90 velas devolvía un 90-day high mal
+            # etiquetado como "52w". Además el EMA200 del mismo dict necesita ≥200
+            # velas para ser real. La TA corre solo sobre TA_TOP_N tickers.
+            df = self.data_fetcher.fetch_ohlcv(candidate.ticker, period="1y")
             if df.empty or len(df) < 30:
                 self.logger.warning(f"Insufficient data for {candidate.ticker}")
                 return self._empty_result(candidate.ticker, today, price=candidate.price)
