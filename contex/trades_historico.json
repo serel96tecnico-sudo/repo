@@ -397,6 +397,19 @@
       "fecha_cierre": "2026-07-27",
       "hora_cierre": "15:32",
       "nota": "27/07 CONFIRMADO (detalle transaccion DeGiro, ambas patas). VENTA 5 @$205.065 (MSRP/NSY): $1,025.33 -> EUR900.99 (FX 1.138), AutoFX -EUR2.25, comis -EUR2.00 -> recibido EUR896.74. COMPRA 5 @$178.65 (CDED/NSY): -$893.25 -> -EUR781.71 (FX 1.1427), AutoFX -EUR1.95, comis -EUR2.00 -> pagado EUR785.66. P&L REALIZADO NETO = 896.74 - 785.66 = +EUR111.08 (gross vs BEP +$132.08 +14.8%; fees round-trip EUR8.20). GANADORA solida: energetica cerrada tras semanas en verde; libero capital para NVDA (5 @$201)."
+    },
+    {
+      "ticker": "BANC",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 28,
+      "entrada_usd": 21.61,
+      "cierre_usd": 20.81,
+      "gross_pl_usd": -22.4,
+      "net_pl_usd": -27.4,
+      "fecha_cierre": "2026-07-28",
+      "hora_cierre": "20:36:25",
+      "nota": "28/07. CERRADA a mercado 28 @$20.81 (20:36:25, Colmex 'Ejecutadas') ANTES del earnings del 29/07 BMO. BEP $21.61. Gross (20.81-21.61)*28 = -$22.40, net ~-$27.40 (fees round-trip $5). DECISION DE RIESGO tras analisis del earnings: read-across bancos regionales Q2 2026 (RF EPS +8% y ZION +11.5% batieron; EWBC y WAL mixtos/miss) PERO reaccion de las acciones NEGATIVA incluso con beats (sell the news: RF slip, EWBC -1.7% AH, WAL dip) + insiders vendiendo -86% + entrada en maximos de 52s (BEP $21.61 vs 52wH $21.93, posicion perdedora). Mantener una perdedora a traves de un evento binario con un stop que NO cubre gaps era asimetria mala. Es exactamente el caso del Filtro B (no sostener a traves de earnings). Cierre disciplinado asumiendo -$27 en vez de la loteria del gap."
     }
   ]
 }
