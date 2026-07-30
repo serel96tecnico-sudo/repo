@@ -106,3 +106,21 @@ Post-mortem del cierre de BE (corto abierto 29/07 @$174,68, cubierto 30/07 @$205
 
 Detalle completo y motivación en `docs/estrategia_riesgo.md` §3 (R8) y cabecera. Tests:
 `tests/test_earnings_parsing.py`, ampliación de `tests/test_risk_policy.py`.
+
+## 2026-07-30 (cont.) — Bug de splits sin ajustar en Alpaca (NO revertir)
+
+Al re-correr el pipeline tras el fix de R8, contrasté los candidatos contra gráficos de
+TradingView y encontré un bug de datos más grave que el de BE: `data/market_data.py` pedía
+barras a Alpaca (`StockBarsRequest`) **sin `adjustment`**, que por defecto es `raw` (sin
+ajustar por split). CRWD hizo split 4:1 el 2026-07-02 y su serie histórica quedaba con un
+precipicio de precio (cierre $772,62 el 01/07 → $193,73 el 02/07) — corrompía `high_52w`
+(785,59 en vez de 217,50 real), EMAs, Bollinger, soporte/resistencia, todo. El "downtrend
+brutal" que el TA le puso a CRWD ese día era en gran parte artefacto del split.
+
+**Alcance:** cualquier ticker de la watchlist con un split reciente (ventana de hasta ~6 años
+para el MA200 semanal/diario) tiene el mismo problema — sesga sistemáticamente hacia
+"downtrend" en el lado post-split.
+
+**Fix:** `adjustment=Adjustment.ALL` añadido a los dos `StockBarsRequest` de `market_data.py`
+(`_fetch_ohlcv_alpaca` y `_fetch_batch_quotes_alpaca`). Verificado en vivo: high_52w de CRWD
+pasa a 217,355, coincide con TradingView. Detalle en `docs/estrategia_riesgo.md` §9.

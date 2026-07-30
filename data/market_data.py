@@ -128,6 +128,7 @@ class MarketDataFetcher:
         try:
             from alpaca.data.requests import StockBarsRequest
             from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
+            from alpaca.data.enums import Adjustment
 
             tf_map = {
                 "day":   TimeFrame.Day,
@@ -144,12 +145,18 @@ class MarketDataFetcher:
             else:
                 cal_days = int(num * 1.42) + 10
 
+            # adjustment="all" (split+dividendo): sin esto Alpaca sirve barras RAW.
+            # Caso CRWD (2026-07-30): split 4:1 el 02/07 sin ajustar generaba un
+            # precipicio de precio en la serie histórica (cierre $772 el 01/07 ->
+            # $194 el 02/07), corrompiendo high_52w/EMAs/Bollinger/soporte-resistencia
+            # para CUALQUIER ticker con un split dentro de la ventana pedida.
             request = StockBarsRequest(
                 symbol_or_symbols=ticker,
                 timeframe=tf,
                 start=datetime.now() - timedelta(days=cal_days),
                 end=datetime.now(),
                 feed="iex",
+                adjustment=Adjustment.ALL,
             )
             bars = client.get_stock_bars(request)
             df = bars.df
@@ -331,18 +338,24 @@ class MarketDataFetcher:
         try:
             from alpaca.data.requests import StockBarsRequest
             from alpaca.data.timeframe import TimeFrame
+            from alpaca.data.enums import Adjustment
 
             # 370 días naturales ≈ 252 sesiones ≈ 52 semanas: necesario para que
             # high_52w/low_52w sean de VERDAD de 52 semanas. Antes se pedían 45
             # días, así que "near_52w_high" era en realidad "near 45-day high"
             # (señal mal etiquetada). avg_vol usa .tail(20) y change_pct usa las
             # dos últimas velas, así que la ventana más larga no los altera.
+            # adjustment="all": sin ajuste por split, un ticker que hizo split dentro
+            # de estos 370 días da un high_52w/low_52w falso (precio pre-split
+            # inflado o post-split hundido según el lado del corte). Caso real: CRWD
+            # split 4:1 el 2026-07-02, high_52w salía en 785 en vez de ~217.
             request = StockBarsRequest(
                 symbol_or_symbols=tickers,
                 timeframe=TimeFrame.Day,
                 start=datetime.now() - timedelta(days=370),
                 end=datetime.now(),
                 feed="iex",
+                adjustment=Adjustment.ALL,
             )
             df = client.get_stock_bars(request).df
             results = {}

@@ -279,3 +279,33 @@ sin tendencia) — de eso se encarga el filtro C (ADX). En `fundamental_analyst`
 ### Filtro D — Confirmación multi-agente (PENDIENTE)
 Exigir varias patas por encima de un suelo en vez de la media ponderada del composite. Potente
 pero **requiere backtest** antes de cablearlo (como R5/R5b) para no cortar la cola de edge.
+
+---
+
+## 9. Integridad de datos — bug de splits sin ajustar (corregido 2026-07-30)
+
+Descubierto al auditar la corrida del 30/07 contra los gráficos de TradingView tras el caso
+BE: **`data/market_data.py` pedía barras diarias a Alpaca (`StockBarsRequest`) sin especificar
+`adjustment`**, que por defecto viene en `raw` (sin ajustar por split). Cualquier ticker que
+hiciera un split dentro de la ventana pedida (1 año para indicadores/high_52w, ~370 días para
+el scanner) quedaba con un precipicio de precio en su serie histórica: los precios previos al
+split se quedan inflados por el factor del split, los posteriores son los reales.
+
+**Caso confirmado: CRWD.** Split 4:1 el 2026-07-02 (cierre $772,62 el 01/07 → $193,73 el
+02/07, sin ninguna noticia que lo justifique). Esto corrompía TODOS los indicadores derivados
+de esa serie: `high_52w` salía en **785,59** en vez de **217,50** (verificado contra
+TradingView), y EMA9/21/50/200, SMA20/50, Bollinger Bands, ATR, soporte/resistencia y
+`base_breakout` quedaban igual de sesgados — el "downtrend brutal" que el TA analyst le
+asignó a CRWD el 30/07 era en gran parte un artefacto del split, no una caída real de precio.
+Contrastado también META, XPEV y CMCSA en el mismo informe: sin precipicio, datos genuinos.
+
+**Alcance:** no es un bug puntual de CRWD — afecta a **cualquier ticker de la watchlist con un
+split** dentro de la ventana de 1 año (indicadores estándar) o de hasta ~6 años (la serie larga
+de `_ma200_multiframe` para el MA200 semanal/diario). Sesga sistemáticamente hacia "downtrend"
+en el lado post-split (precio real vs. medias infladas por el pre-split), lo que puede
+bloquear largos válidos o —peor— habilitar cortos sobre una estructura técnica falsa.
+
+**Fix:** `adjustment=Adjustment.ALL` añadido a los dos `StockBarsRequest` de
+`data/market_data.py` (`_fetch_ohlcv_alpaca` y `_fetch_batch_quotes_alpaca`). Verificado en
+vivo: `high_52w` de CRWD pasa de 785,59 a 217,355 (coincide con TradingView) y la serie ya no
+tiene discontinuidad en la fecha del split.
