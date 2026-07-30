@@ -3,6 +3,8 @@
 > **Estado:** v1 — 2026-06-13. Primera spec de estrategia definida explícitamente por el operador (no heredada de defaults del modelo).
 > **Implementación:** R1/R2/R3 cableadas en código el 2026-06-15 (`config.py` §4 + `utils/risk_policy.py`, aplicadas en `risk_manager.py` y `orchestrator._apply_exposure_caps`). R4 ya vivía en el orchestrator. R5 (calidad de entrada, calibrada con `backtest_entry_quality.py`) en `risk_manager.py`. **2026-06-24:** corrección estructural — `PORTFOLIO_VALUE` al capital real (€7.000), **R3 redefinida** como perfil de riesgo dinámico por trade (1–3 % inverso al VIX, reemplaza el half-size fijo) y **R6 nueva** (tope de riesgo agregado de cartera al 10 %). **Fix régimen:** `regime` se derivaba solo del VIX y podía decir BULLISH con el SPY en Downtrend, bloqueando cortos en las caídas; ahora `classify_regime` lo hace coherente (dirección por precio, matizada por VIX) y el gate de dirección de R4 lee `spy_trend`, no la etiqueta de volatilidad. Tests en `tests/test_risk_policy.py` y `tests/test_entry_quality.py`.
 > **Ámbito:** política de exposición, concentración y sizing. NO toca los indicadores técnicos del pipeline.
+>
+> **2026-07-30:** **R8 nueva** (guarda de catalizador de sentiment alcista en cortos, caso BE) en `utils/risk_policy.py` (`short_bullish_catalyst_guard`), aplicada en `orchestrator._merge_and_rank`. Fix de bug relacionado en `FundamentalAnalyst._parse_earnings_days` (earnings de ayer se calculaba como "364 días", desactivando de facto cualquier lectura de proximidad de earnings). Tests en `tests/test_earnings_parsing.py` y ampliación de `tests/test_risk_policy.py`.
 
 ---
 
@@ -93,6 +95,19 @@ Si un ticker **cerró en pérdida** (neto > `RECENT_LOSS_MIN_ABS`, para no conta
 >
 > **Cautelas (§7).** Muestra pequeña (13 trades resueltos) y nombres repetidos que pesan mucho (MRVL/GRAB). Es un **prototipo**: la ventana (5 días) y el umbral (€10) son la primera aproximación del operador, pendientes de calibrar con más datos. No usa aún el precio forward — solo el hecho del cierre perdedor.
 
+### R8 — Guarda de catalizador de sentiment alcista en cortos (nueva 2026-07-30)
+Si el `NewsSentimentAnalyst` encuentra un catalizador reciente (`catalyst_found=True`) y el `sentiment_score_normalized` supera `SHORT_BULLISH_CATALYST_MIN` (7.5), el corto se degrada a WATCH sin más cálculo de score — mismo tratamiento duro que el resto de R4. Implementado en `short_bullish_catalyst_guard()` (`utils/risk_policy.py`), aplicado en `orchestrator._merge_and_rank` antes que los demás guards de R4.
+
+> **Motivación (caso BE, 29/07/2026).** Se abrió un corto un día después de que Bloom Energy publicara un earnings-beat con guidance al alza (récord de ingresos, backlog $20B). El sentiment analyst **sí** detectó el catalizador (`sentiment_score_normalized=8.9`, `catalyst_found=True`) y el propio resumen del risk_manager avisaba en texto de "riesgo clave: short squeeze impulsado por el catalizador positivo de earnings" — pero nada convertía ese aviso en un veto. El squeeze posterior (+25% en 24h) forzó el stop con fuerte slippage (net ≈ −$127 sobre una posición de 4 acciones). El sistema tenía la señal; le faltaba la regla.
+>
+> **Por qué el sentiment no se invierte para cortos en el composite general.** El `sentiment_score_normalized` se suma con el mismo peso positivo en `_merge_and_rank` sea cual sea la dirección (no hay lógica direccional en el composite) — R8 no arregla eso de raíz, solo actúa como veto binario cuando la combinación catalyst+sentiment es lo bastante fuerte. Revisar si el composite debería invertir el sentiment para cortos es una cuestión abierta (§6).
+>
+> **Relación con Filtro B.** Filtro B (earnings dentro de la ventana de hold, §8) es forward-looking: bloquea abrir/mantener una posición ANTES de un reporte. R8 cubre el hueco simétrico: el día(s) DESPUÉS del reporte, cuando el catalizador ya es público pero el mercado todavía puede seguir reaccionando (squeeze). Son complementarios, no redundantes.
+>
+> **Bug relacionado, corregido el mismo día.** `_parse_earnings_days()` (`agents/fundamental_analyst.py`) calculaba `earnings_days_away=364` para BE en vez de `-1` (earnings de ayer), por una comparación de fechas que asumía "año que viene" en cuanto la fecha parseada quedaba más de un día atrás de `datetime.now()`. Esto no causó directamente el fallo de R8 (que se basa en sentiment, no en `earnings_days_away`), pero sí es la causa raíz de que ninguna métrica del pipeline reflejara correctamente "esto acaba de reportar resultados". Fix: probar las 3 interpretaciones de año (anterior/actual/siguiente) y tomar la más cercana a hoy, sin heurística de umbral. Tests en `tests/test_earnings_parsing.py`.
+>
+> **Cautelas.** Umbral (7.5) es una primera aproximación, sin backtest — igual que R7 en su día. Solo actúa cuando `catalyst_found=True`; un sentiment alcista "de fondo" sin evento fresco identificado no dispara el guard (evita ser demasiado restrictivo con cortos en nombres que simplemente tienen buena prensa reciente).
+
 ### R4 — Cortos (sin cambios estructurales)
 Los cortos realizados funcionaron (6/7 ganadores, +207). Se mantienen las reglas vigentes: solo Broker 2, gated por régimen (no abrir en *Strong Uptrend*), entrada en pullback a EMA9. Esta spec no los modifica.
 
@@ -164,6 +179,9 @@ DEFAULT_STOP_PCT          = 0.08
 # R7 — Enfriamiento de re-entrada tras pérdida reciente
 RECENT_LOSS_COOLDOWN_DAYS = 5
 RECENT_LOSS_MIN_ABS       = 10.0
+
+# R8 — Guarda de catalizador de sentiment alcista en cortos
+SHORT_BULLISH_CATALYST_MIN = 7.5
 ```
 
 > Estos valores viven aquí como **decisión** y están replicados en `config.py`. La clasificación de tiers (§2) y sub-temas vive en `utils/risk_policy.py` como **semilla editable**: los nombres no listados se clasifican por capitalización (>=100B→A, >=15B→B, resto→C/otros). Conviene revisar la taxonomía periódicamente (§5).

@@ -11,10 +11,11 @@ from config import (
     TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
     PORTFOLIO_VALUE, SUBTHEME_MAX_PCT, PORTFOLIO_RISK_CAP_PCT,
     SHORT_EXTENDED_ATR_MAX, RECENT_LOSS_COOLDOWN_DAYS, ADX_TREND_MIN,
+    SHORT_BULLISH_CATALYST_MIN,
 )
 from utils.risk_policy import (
     build_tier_map, classify_tier, high_beta_cap, is_high_beta, is_explicitly_classified,
-    open_position_risk, recent_loss_cooldown,
+    open_position_risk, recent_loss_cooldown, short_bullish_catalyst_guard,
 )
 from agents.market_scanner import MarketScanner
 from agents.fundamental_analyst import FundamentalAnalyst
@@ -328,7 +329,14 @@ class TradingOrchestrator:
                 )
 
             demote_reason = ""
-            if is_short and getattr(risk, "entry_extended", False):
+            if is_short and sent and short_bullish_catalyst_guard(sent.sentiment_score_normalized, sent.catalyst_found):
+                rec = "WATCH"
+                demote_reason = (
+                    f"R8: catalizador de sentiment alcista reciente contra el corto "
+                    f"(sentiment {sent.sentiment_score_normalized:.1f} >= {SHORT_BULLISH_CATALYST_MIN})"
+                )
+                self.logger.info(f"  {ticker}: SHORT demoted to WATCH — R8 guard ({demote_reason})")
+            elif is_short and getattr(risk, "entry_extended", False):
                 rec = "WATCH"
                 demote_reason = (
                     f"R4: short sobre-extendido (rebote-entrada >{SHORT_EXTENDED_ATR_MAX} ATR sobre precio)"

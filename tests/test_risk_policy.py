@@ -6,13 +6,13 @@ from datetime import date
 
 from utils.risk_policy import (
     classify_tier, is_high_beta, high_beta_cap, risk_pct_for_regime, open_position_risk,
-    size_position, recent_loss_cooldown,
+    size_position, recent_loss_cooldown, short_bullish_catalyst_guard,
 )
 from config import (
     HIGH_BETA_CAP_STRONG_UP, HIGH_BETA_CAP_NEUTRAL, HIGH_BETA_CAP_RISKOFF,
     RISK_PCT_STRONG_UP, RISK_PCT_UPTREND, RISK_PCT_NEUTRAL, RISK_PCT_RISKOFF,
     DEFAULT_STOP_PCT, MIN_INVEST_PER_TRADE, MAX_INVEST_PER_TRADE,
-    RECENT_LOSS_MIN_ABS,
+    RECENT_LOSS_MIN_ABS, SHORT_BULLISH_CATALYST_MIN,
 )
 
 
@@ -234,3 +234,26 @@ def test_cooldown_unknown_direction_is_none():
                "fecha_cierre": "2026-07-13"}])
     cd = recent_loss_cooldown(pf, today=REF, window_days=5)
     assert cd["CIFR"]["direction"] is None
+
+
+# ── R8 — Guarda de catalizador de sentiment alcista en cortos ─────────────────
+# Caso real: BE (29/07/2026), corto abierto un día después de un earnings-beat
+# con guidance al alza (sentiment_score_normalized 8.9, catalyst_found=True).
+# El squeeze posterior (+25% en 24h) forzó el stop con fuerte slippage.
+
+def test_r8_blocks_short_on_be_case():
+    assert short_bullish_catalyst_guard(8.9, True) is True
+
+
+def test_r8_ignores_high_sentiment_without_catalyst():
+    # sentiment alcista "de fondo" sin un evento fresco identificado no basta
+    assert short_bullish_catalyst_guard(8.9, False) is False
+
+
+def test_r8_ignores_neutral_sentiment_with_catalyst():
+    assert short_bullish_catalyst_guard(6.0, True) is False
+
+
+def test_r8_threshold_is_inclusive():
+    assert short_bullish_catalyst_guard(SHORT_BULLISH_CATALYST_MIN, True) is True
+    assert short_bullish_catalyst_guard(SHORT_BULLISH_CATALYST_MIN - 0.1, True) is False

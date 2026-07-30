@@ -170,6 +170,17 @@ DEFAULT_STOP_PCT = 0.08
 RECENT_LOSS_COOLDOWN_DAYS = 5
 RECENT_LOSS_MIN_ABS = 10.0   # pérdida neta mín. (€/$ abs.) para contar como "stop real"
 
+# R8 (nueva 2026-07-30) — Guarda de catalizador de sentiment alcista en cortos.
+# Caso BE (29/07/2026): se abrió un corto un día después de un earnings-beat con
+# guidance al alza (sentiment_score_normalized 8.9, catalyst_found=True); el propio
+# resumen del risk_manager avisaba en texto de "riesgo de short squeeze", pero nada
+# lo convertía en veto — el corto se mantuvo y el squeeze (+25% en 24h) forzó el stop
+# con fuerte slippage. Si el sentiment analyst encuentra un catalizador reciente Y
+# el sentiment normalizado supera este umbral, el corto se degrada a WATCH sin más
+# cálculo de score (igual de duro que el resto de R4). Aplicado en
+# orchestrator._merge_and_rank (utils.risk_policy.short_bullish_catalyst_guard).
+SHORT_BULLISH_CATALYST_MIN = 7.5
+
 # ── Seguimiento (vigilancia de extendidos para entrada en pullback) ──────────
 # La lista era append-only y acumulaba tickers con precios de referencia de hace
 # semanas ("esperar pullback a $478" cuando ya no significa nada). Una entrada

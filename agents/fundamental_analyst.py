@@ -3,7 +3,7 @@ import os
 import re
 import time
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 from agents.base_agent import BaseAgent
@@ -731,14 +731,27 @@ class FundamentalAnalyst(BaseAgent):
 
     @staticmethod
     def _parse_earnings_days(earnings_str: str) -> int:
+        """Días con signo hasta la fecha de earnings de Finviz: negativo = ya
+        ocurrió hace N días, 0 = hoy, positivo = N días para el próximo.
+
+        Bug corregido 2026-07-30 (caso BE): Finviz no incluye año y tarda unos
+        días en rotar el campo al próximo trimestre tras el reporte. La lógica
+        anterior (`dt < ahora - 1 día → año siguiente`) trataba "Jul 28"
+        evaluado el 29/07 (earnings de AYER) como si fuera dentro de 364 días,
+        porque comparaba la medianoche de `dt` contra un timestamp con hora.
+        Eso desactivó el Filtro B de earnings justo el día de mayor riesgo
+        (post-reacción). Ahora se prueban las 3 interpretaciones de año
+        (anterior/actual/siguiente) y se toma la más cercana a hoy — sin
+        heurística de "más de N días implica año que viene".
+        """
         if not earnings_str or earnings_str.strip() in ("-", ""):
             return 999
         try:
             clean = re.sub(r"\s+(AMC|BMO|--)\s*$", "", earnings_str.strip())
-            year = datetime.now().year
-            dt = datetime.strptime(f"{clean} {year}", "%b %d %Y")
-            if dt < datetime.now() - timedelta(days=1):
-                dt = dt.replace(year=year + 1)
-            return max(0, (dt.date() - datetime.now().date()).days)
+            today = datetime.now().date()
+            base = datetime.strptime(f"{clean} {today.year}", "%b %d %Y").date()
+            candidates = [base.replace(year=today.year + delta) for delta in (-1, 0, 1)]
+            closest = min(candidates, key=lambda d: abs((d - today).days))
+            return (closest - today).days
         except Exception:
             return 999

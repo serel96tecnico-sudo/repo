@@ -27,6 +27,7 @@ from config import (
     RISK_PCT_NEUTRAL, RISK_PCT_RISKOFF,
     DEFAULT_STOP_PCT, MIN_INVEST_PER_TRADE, MAX_INVEST_PER_TRADE,
     RECENT_LOSS_COOLDOWN_DAYS, RECENT_LOSS_MIN_ABS,
+    SHORT_BULLISH_CATALYST_MIN,
     LOGS_DIR,
 )
 from utils.logger import get_logger
@@ -264,6 +265,20 @@ def recent_loss_cooldown(portfolio: dict, today=None,
             out[tkr] = {"direction": direction, "days_ago": days_ago,
                         "pl": round(pl, 2), "fecha": fecha_str}
     return out
+
+
+def short_bullish_catalyst_guard(sentiment_score_normalized: float, catalyst_found: bool,
+                                  min_score: float = SHORT_BULLISH_CATALYST_MIN) -> bool:
+    """R8 — un corto no se abre contra un catalizador de sentiment fuerte y reciente.
+
+    Caso BE (29/07/2026): corto abierto un día después de un earnings-beat con
+    guidance al alza (sentiment_score_normalized 8.9, catalyst_found=True) — el
+    sentiment ya había detectado el catalizador pero nada lo convertía en veto.
+    Resultado: short squeeze de +25% en 24h, stop saltado con fuerte slippage.
+
+    True → degradar el corto a WATCH (mismo tratamiento duro que el resto de R4).
+    """
+    return catalyst_found and sentiment_score_normalized >= min_score
 
 
 def build_tier_map(candidates) -> dict:

@@ -86,3 +86,23 @@ Los netos en EUR que no vengan del extracto del broker se marcan como **ESTIMADO
 ## Registro de decisiones / gotchas
 
 - **2026-07-22** — Creado este fichero (opción A) como memoria persistente fiable, cargada vía `CLAUDE.md`. claude-mem queda como capa automática de fondo tras reactivar su worker con Bun.
+
+## 2026-07-30 — Caso BE: corto contra earnings-beat, R8 nueva + fix de bug de fechas (NO revertir)
+
+Post-mortem del cierre de BE (corto abierto 29/07 @$174,68, cubierto 30/07 @$205,28, net ≈ −$127,40):
+
+1. **Bug corregido** — `FundamentalAnalyst._parse_earnings_days` calculaba `earnings_days_away=364`
+   para un earnings de **ayer** ("Jul 28 AMC" evaluado el 29/07), por comparar la medianoche de
+   la fecha parseada contra un timestamp con hora (`dt < ahora - 1 día → año siguiente`). Ahora
+   prueba las 3 interpretaciones de año (anterior/actual/siguiente) y toma la más cercana a hoy.
+2. **R8 nueva** — `short_bullish_catalyst_guard()` en `utils/risk_policy.py`: si el sentiment
+   analyst encuentra un catalizador reciente (`catalyst_found=True`) con
+   `sentiment_score_normalized >= SHORT_BULLISH_CATALYST_MIN` (7.5), el corto se degrada a WATCH.
+   BE tenía sentiment 8.9 con catalyst_found=True (earnings beat + guidance al alza) — el sistema
+   ya veía el riesgo de squeeze en el texto del risk_manager, pero nada lo convertía en veto.
+3. **Pendiente/cuestión abierta**: el sentiment NO se invierte por dirección en el composite
+   general (`_merge_and_rank` suma `sentiment_score_normalized` igual para largos y cortos) — R8
+   es un parche de veto binario, no una corrección de raíz del scoring. Revisar si conviene.
+
+Detalle completo y motivación en `docs/estrategia_riesgo.md` §3 (R8) y cabecera. Tests:
+`tests/test_earnings_parsing.py`, ampliación de `tests/test_risk_policy.py`.
