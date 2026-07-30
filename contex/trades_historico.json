@@ -410,6 +410,21 @@
       "fecha_cierre": "2026-07-28",
       "hora_cierre": "20:36:25",
       "nota": "28/07. CERRADA a mercado 28 @$20.81 (20:36:25, Colmex 'Ejecutadas') ANTES del earnings del 29/07 BMO. BEP $21.61. Gross (20.81-21.61)*28 = -$22.40, net ~-$27.40 (fees round-trip $5). DECISION DE RIESGO tras analisis del earnings: read-across bancos regionales Q2 2026 (RF EPS +8% y ZION +11.5% batieron; EWBC y WAL mixtos/miss) PERO reaccion de las acciones NEGATIVA incluso con beats (sell the news: RF slip, EWBC -1.7% AH, WAL dip) + insiders vendiendo -86% + entrada en maximos de 52s (BEP $21.61 vs 52wH $21.93, posicion perdedora). Mantener una perdedora a traves de un evento binario con un stop que NO cubre gaps era asimetria mala. Es exactamente el caso del Filtro B (no sostener a traves de earnings). Cierre disciplinado asumiendo -$27 en vez de la loteria del gap."
+    },
+    {
+      "ticker": "BE",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 4,
+      "entrada_usd": 174.68,
+      "cierre_usd": 205.28,
+      "gross_pl_usd": -122.4,
+      "net_pl_usd": -127.4,
+      "fecha_entrada": "2026-07-29",
+      "fecha_cierre": "2026-07-30",
+      "hora_entrada": "20:49:48",
+      "hora_cierre": "15:44:25",
+      "nota": "30/07 CONFIRMADO (historico de ordenes Colmex). Venta (apertura corto) 4 @$174.68 limitada, 29/07 20:49:48, Ejecutadas. Compra (cobertura) 4 @$205.28 a mercado, 30/07 15:44:25, Ejecutadas. Gross (174.68-205.28)*4 = -$122.40, fees round-trip -$5.00, net -$127.40. CAUSA: corto abierto el 29/07 ya con el rally de earnings en marcha (Bloom Energy publico record Q2 2026 -- ingresos $1.07B vs $827M esperado, BPA $0.78 vs $0.41, guidance FY26 subida a $3.9-4.2B, backlog $20B -- el 28/07 tras cierre). El sentiment analyst SI detecto el catalizador (sentiment_score_normalized 8.9, catalyst_found=True) y el resumen de riesgo avisaba en texto de 'riesgo de short squeeze', pero nada lo convertia en veto duro. El stop se amplio manualmente el 30/07 de $172.93 a $188.16 dandole mas margen, pero el gap salto por encima igualmente y la cobertura llego a $205.28 con fuerte slippage. MOTIVO la nueva regla R8 (short_bullish_catalyst_guard, utils/risk_policy.py): degrada a WATCH cualquier corto con catalyst_found=True y sentiment_score_normalized >= 7.5. Ya validada en la corrida del 30/07: bloqueo XPEV (8.1) y CRWD (7.6)."
     }
   ]
 }
