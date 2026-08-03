@@ -1,6 +1,6 @@
 {
   "description": "DeGiro favourites list",
-  "updated": "2026-07-27",
+  "updated": "2026-08-03",
   "entries": [
     {
       "ticker": "AAPL",
@@ -596,6 +596,46 @@
       "ticker": "ZBIO",
       "added": "2026-07-27",
       "source": "long_screener"
+    },
+    {
+      "ticker": "VELO",
+      "added": "2026-07-29",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "ARTV",
+      "added": "2026-07-29",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "ABTC",
+      "added": "2026-07-30",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "FBRT",
+      "added": "2026-07-30",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "ASST",
+      "added": "2026-07-30",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "FOSL",
+      "added": "2026-07-30",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "SONO",
+      "added": "2026-07-31",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "AVR",
+      "added": "2026-08-03",
+      "source": "long_screener"
     }
   ],
   "tickers": [
@@ -717,6 +757,14 @@
     "XPEV",
     "VEEE",
     "ADSK",
-    "ZBIO"
+    "ZBIO",
+    "VELO",
+    "ARTV",
+    "ABTC",
+    "FBRT",
+    "ASST",
+    "FOSL",
+    "SONO",
+    "AVR"
   ]
 }

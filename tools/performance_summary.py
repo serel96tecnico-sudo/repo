@@ -21,7 +21,7 @@ from pathlib import Path
 # --------------------------------------------------------------------------- #
 #  Parámetros (ajusta aquí si cambian las premisas)                            #
 # --------------------------------------------------------------------------- #
-START_DATE = "2026-05-15"          # inicio del track record
+START_DATE = "2026-01-01"          # inicio del track record
 USD_TO_EUR = 0.92                  # 1 USD = 0,92 €
 # Base de capital = capital operativo (Broker 1 EUR + Broker 2 USD->EUR),
 # se lee dinámicamente de portfolio.json.

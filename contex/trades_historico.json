@@ -3,78 +3,815 @@
   "created": "2026-06-11",
   "trades": [
     {
-      "ticker": "AMD",
+      "ticker": "BTC",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": null,
+      "net_pl_eur": -106.38,
+      "fecha_cierre": "2026-01-02",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro). FIFO: compra 0.003143 BTC @EUR95,529.43 (29/10/2025, -EUR300.25) + compra 0.006163 BTC @EUR81,185.73 (17/11/2025, -EUR500.35) + parcial 0.002547 de 0.002606 BTC @EUR76,816.08 (11/12/2025, -EUR196.63 proporcional). Venta 0.011853 BTC @EUR75,862.31 el 02/01/2026, EUR894.85 recibidos. Net EUR-106.38."
+    },
+    {
+      "ticker": "JMIA",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 60,
+      "net_pl_eur": 130.49,
+      "fecha_cierre": "2026-01-09",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2025 (fecha exacta pendiente) @$11.75. Cierre @$14.43. Net EUR+130.49. ENTRADA APROXIMADA/ESTIMADA -- ver conversacion de reconciliacion 2026-08-01."
+    },
+    {
+      "ticker": "RGTI",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 30,
+      "net_pl_eur": -44.19,
+      "fecha_cierre": "2026-01-23",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-01-09 @$25.25. Cierre @$24.145. Net EUR-44.19."
+    },
+    {
+      "ticker": "SMR",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 40,
+      "net_pl_usd": 200.6,
+      "fecha_cierre": "2026-01-23",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv + tradeHistory_2025.csv). Entrada 2025-12-29 @$14.8. Cierre @$19.94. Net $+200.60."
+    },
+    {
+      "ticker": "JD",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 35,
+      "net_pl_usd": -101.85,
+      "fecha_cierre": "2026-02-03",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv + tradeHistory_2025.csv). Entrada: 2025-11-05 (20 @$32.00) + 2026-01-30 (15 @$28.49). Cierre @$27.8. Net $-101.85."
+    },
+    {
+      "ticker": "ONDS",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 50,
+      "net_pl_eur": -130.21,
+      "fecha_cierre": "2026-02-04",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-01-21 @$12.4. Cierre @$9.6. Net EUR-130.21."
+    },
+    {
+      "ticker": "ITB",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 5.0,
+      "net_pl_usd": 37.13,
+      "fecha_cierre": "2026-02-18",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-01-23 @$105.0. Cierre @$113.4267. Net $+37.13."
+    },
+    {
+      "ticker": "OSS",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 50,
+      "net_pl_eur": 14.2,
+      "fecha_cierre": "2026-02-19",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-02-19 @$9.505. Cierre @$10.0. Net EUR+14.20."
+    },
+    {
+      "ticker": "CIFR",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 25,
+      "net_pl_eur": -46.75,
+      "fecha_cierre": "2026-02-20",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-01-15 @$17.4. Cierre @$15.68. Net EUR-46.75."
+    },
+    {
+      "ticker": "CRMT",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 25,
+      "net_pl_eur": -123.63,
+      "fecha_cierre": "2026-02-20",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-01-23 @$27.3. Cierre @$21.84. Net EUR-123.63."
+    },
+    {
+      "ticker": "AXTI",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 19.0,
+      "net_pl_usd": 187.22,
+      "fecha_cierre": "2026-02-24",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-02-18 @$24.0232. Cierre @$34.14. Net $+187.22."
+    },
+    {
+      "ticker": "DLO",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 50,
+      "net_pl_eur": -76.75,
+      "fecha_cierre": "2026-02-26",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2025 (fecha exacta pendiente) @$14.08. Cierre @$12.52. Net EUR-76.75. ENTRADA APROXIMADA/ESTIMADA -- ver conversacion de reconciliacion 2026-08-01."
+    },
+    {
+      "ticker": "KRE",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 7.0,
+      "net_pl_usd": -41.95,
+      "fecha_cierre": "2026-02-27",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-02-18 @$71.62. Cierre @$66.3409. Net $-41.95."
+    },
+    {
+      "ticker": "NFLX",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 7,
+      "net_pl_eur": 36.9,
+      "fecha_cierre": "2026-03-03",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-01-02 @$90.95. Cierre @$97.0. Net EUR+36.90."
+    },
+    {
+      "ticker": "NFLX",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 8,
+      "net_pl_eur": 51.45,
+      "fecha_cierre": "2026-03-03",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-01-13 @$89.2. Cierre @$97.0. Net EUR+51.45."
+    },
+    {
+      "ticker": "NFLX",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 15,
+      "net_pl_eur": 44.1,
+      "fecha_cierre": "2026-03-03",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2025 (fecha exacta pendiente) @$94.0. Cierre @$97.0. Net EUR+44.10. ENTRADA APROXIMADA/ESTIMADA -- ver conversacion de reconciliacion 2026-08-01."
+    },
+    {
+      "ticker": "ASTS",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 6.0,
+      "net_pl_usd": 23.98,
+      "fecha_cierre": "2026-03-04",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-02-10 @$99.41. Cierre @$104.24. Net $+23.98."
+    },
+    {
+      "ticker": "NKE",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 12,
+      "net_pl_usd": -63.48,
+      "fecha_cierre": "2026-03-04",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv + tradeHistory_2025.csv). Entrada: 2025-12-31 (7 @$63.86) + 2026-01-02 (5 @$63.08). Cierre @$58.87. Net $-63.48."
+    },
+    {
+      "ticker": "RCAT",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 35,
+      "net_pl_eur": 60.17,
+      "fecha_cierre": "2026-03-06",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-03 @$14.8. Cierre @$17.0. Net EUR+60.17."
+    },
+    {
+      "ticker": "HG",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 18.0,
+      "net_pl_usd": -72.86,
+      "fecha_cierre": "2026-03-06",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-02-27 @$31.41. Cierre @$27.6401. Net $-72.86."
+    },
+    {
+      "ticker": "BTC",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": null,
+      "net_pl_eur": -2.31,
+      "fecha_cierre": "2026-03-09",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro). FIFO: remanente 0.000059 BTC de la compra del 11/12/2025 (-EUR4.55 proporcional) + compra 0.003389 BTC @EUR59,061.53 (03/03/2026, -EUR201.16). Venta 0.003446 BTC @EUR59,257.09 el 09/03/2026, EUR203.18 recibidos. Net EUR-2.31."
+    },
+    {
+      "ticker": "SM",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 25,
+      "net_pl_eur": 26.57,
+      "fecha_cierre": "2026-03-10",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-02 @$23.97. Cierre @$25.4. Net EUR+26.57."
+    },
+    {
+      "ticker": "CIFR",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 10,
+      "net_pl_eur": -29.66,
+      "fecha_cierre": "2026-03-10",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-01-15 @$17.4. Cierre @$14.225. Net EUR-29.66."
+    },
+    {
+      "ticker": "CIFR",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 20,
+      "net_pl_eur": -35.56,
+      "fecha_cierre": "2026-03-10",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-02-26 @$16.225. Cierre @$14.225. Net EUR-35.56."
+    },
+    {
+      "ticker": "MUR",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 17.0,
+      "net_pl_usd": -23.2,
+      "fecha_cierre": "2026-03-10",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-03-09 @$34.7486. Cierre @$33.6779. Net $-23.20."
+    },
+    {
+      "ticker": "RCAT",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 50,
+      "net_pl_eur": 57.77,
+      "fecha_cierre": "2026-03-13",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-11 @$14.6. Cierre @$15.89. Net EUR+57.77."
+    },
+    {
+      "ticker": "PARR",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 10.0,
+      "net_pl_usd": 36.6,
+      "fecha_cierre": "2026-03-23",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-03-12 @$53.22. Cierre @$57.38. Net $+36.60."
+    },
+    {
+      "ticker": "GFS",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 10.0,
+      "net_pl_usd": -43.8,
+      "fecha_cierre": "2026-03-23",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-02-26 @$47.8. Cierre @$43.92. Net $-43.80."
+    },
+    {
+      "ticker": "CRGY",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 45.0,
+      "net_pl_usd": 33.35,
+      "fecha_cierre": "2026-03-23",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-03-05 @$11.78. Cierre @$12.6322. Net $+33.35."
+    },
+    {
+      "ticker": "CLSK",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 60,
+      "net_pl_eur": -23.97,
+      "fecha_cierre": "2026-03-24",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-02-24 @$10.1. Cierre @$9.595. Net EUR-23.97."
+    },
+    {
+      "ticker": "TE",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 80,
+      "net_pl_eur": -65.13,
+      "fecha_cierre": "2026-03-24",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-18 @$7.44. Cierre @$6.635. Net EUR-65.13."
+    },
+    {
+      "ticker": "ZETA",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 35,
+      "net_pl_eur": -73.59,
+      "fecha_cierre": "2026-03-24",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-04 @$18.67. Cierre @$16.4. Net EUR-73.59."
+    },
+    {
+      "ticker": "LASR",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 12,
+      "net_pl_eur": 1.09,
+      "fecha_cierre": "2026-03-30",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-09 @$57.9. Cierre @$58.145. Net EUR+1.09."
+    },
+    {
+      "ticker": "NOG",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 16.0,
+      "net_pl_usd": 8.28,
+      "fecha_cierre": "2026-03-31",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-03-24 @$28.8. Cierre @$29.66. Net $+8.28."
+    },
+    {
+      "ticker": "DK",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 12,
+      "net_pl_eur": -51.91,
+      "fecha_cierre": "2026-04-01",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-30 @$47.4. Cierre @$43.58. Net EUR-51.91."
+    },
+    {
+      "ticker": "ADEA",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 24.0,
+      "net_pl_usd": 6.1,
+      "fecha_cierre": "2026-04-02",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-03-23 @$24.4724. Cierre @$24.935. Net $+6.10."
+    },
+    {
+      "ticker": "INSW",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 10,
+      "net_pl_eur": 27.74,
+      "fecha_cierre": "2026-04-06",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-20 @$70.5. Cierre @$74.55. Net EUR+27.74."
+    },
+    {
+      "ticker": "RIG",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 90,
+      "net_pl_eur": -25.33,
+      "fecha_cierre": "2026-04-06",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-26 @$6.88. Cierre @$6.65. Net EUR-25.33."
+    },
+    {
+      "ticker": "MSFT",
       "broker": "broker_1",
       "direccion": "long",
       "cantidad": 2,
-      "entrada_usd": 481.87,
-      "cierre_usd": 463.0,
-      "net_pl_eur": -39.68,
-      "fecha_entrada": "2026-06-09",
-      "fecha_cierre": "2026-06-10",
-      "nota": "SL ejecutado @$463.00. Entrada $481.87. Comisiones -€4.08. Net -€39.68."
+      "net_pl_eur": -60.14,
+      "fecha_cierre": "2026-04-06",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-03 @$405.24. Cierre @$372.58. Net EUR-60.14."
     },
     {
-      "ticker": "KGC",
-      "broker": "broker_2",
-      "direccion": "short",
-      "cantidad": 30,
-      "entrada_usd": 24.99,
-      "cierre_usd": 24.47,
-      "gross_pl_usd": 15.6,
-      "net_pl_usd": 5.6,
-      "fecha_entrada": "2026-06-09",
-      "fecha_cierre": "2026-06-10",
-      "nota": "SHORT @$24.99. Cobertura @$24.47 (apertura). Gross +$15.60. Net ~+$5.60. TP $22.50 no alcanzado — cierre manual."
+      "ticker": "AMZN",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 4,
+      "net_pl_eur": -98.77,
+      "fecha_cierre": "2026-04-06",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-01-14 @$239.0. Cierre @$210.64. Net EUR-98.77."
     },
     {
-      "ticker": "HIMS",
+      "ticker": "AMZN",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 2,
+      "net_pl_eur": 11.37,
+      "fecha_cierre": "2026-04-06",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-02-18 @$205.595. Cierre @$210.64. Net EUR+11.37."
+    },
+    {
+      "ticker": "IREN",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 15,
+      "net_pl_eur": -105.57,
+      "fecha_cierre": "2026-04-06",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-02-26 @$43.645. Cierre @$35.145. Net EUR-105.57."
+    },
+    {
+      "ticker": "VIAV",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 17,
+      "net_pl_eur": 56.81,
+      "fecha_cierre": "2026-04-08",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-25 @$36.0. Cierre @$40.715. Net EUR+56.81."
+    },
+    {
+      "ticker": "LRCX",
       "broker": "broker_2",
       "direccion": "long",
-      "cantidad": 50,
-      "entrada_usd": 28.25,
-      "cierre_usd": 28.85,
-      "gross_pl_usd": 30.0,
-      "net_pl_usd": 25.0,
-      "fecha_entrada": "2026-06-09",
-      "fecha_cierre": "2026-06-10",
-      "nota": "SL trailing @$28.85 (16:31). Net ~+$25. Re-entrada abierta broker_1 @$27.83 (25 acc, 10/06 21:39)."
+      "cantidad": 2.0,
+      "net_pl_usd": 51.62,
+      "fecha_cierre": "2026-04-08",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-04-06 @$218.0. Cierre @$246.31. Net $+51.62."
     },
     {
-      "ticker": "WULF",
+      "ticker": "FSLY",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 18.0,
+      "net_pl_usd": 55.3,
+      "fecha_cierre": "2026-04-08",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-04-01 @$29.5. Cierre @$32.88. Net $+55.30."
+    },
+    {
+      "ticker": "PLTR",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 4,
+      "net_pl_eur": -54.25,
+      "fecha_cierre": "2026-04-09",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-08 @$147.675. Cierre @$133.65. Net EUR-54.25."
+    },
+    {
+      "ticker": "TTMI",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 5,
+      "net_pl_eur": 86.4,
+      "fecha_cierre": "2026-04-10",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-08 @$101.0. Cierre @$122.58. Net EUR+86.40."
+    },
+    {
+      "ticker": "TTMI",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 1,
+      "net_pl_eur": 15.28,
+      "fecha_cierre": "2026-04-10",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-08 @$101.0. Cierre @$122.58. Net EUR+15.28."
+    },
+    {
+      "ticker": "STNG",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 8,
+      "net_pl_eur": -24.26,
+      "fecha_cierre": "2026-04-14",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-06 @$76.49. Cierre @$75.41. Net EUR-24.26."
+    },
+    {
+      "ticker": "ASTS",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 6,
+      "net_pl_eur": -62.16,
+      "fecha_cierre": "2026-04-14",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-13 @$98.63. Cierre @$88.23. Net EUR-62.16."
+    },
+    {
+      "ticker": "INVX",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 20.0,
+      "net_pl_usd": -26.83,
+      "fecha_cierre": "2026-04-14",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-03-06 @$27.0. Cierre @$25.9385. Net $-26.83."
+    },
+    {
+      "ticker": "CIFR",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 30.0,
+      "net_pl_usd": 32.8,
+      "fecha_cierre": "2026-04-14",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-04-13 @$17.36. Cierre @$18.62. Net $+32.80."
+    },
+    {
+      "ticker": "LASR",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 14,
+      "net_pl_eur": 92.13,
+      "fecha_cierre": "2026-04-15",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-30 @$57.2. Cierre @$67.305. Net EUR+92.13."
+    },
+    {
+      "ticker": "DRS",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 10,
+      "net_pl_eur": -23.64,
+      "fecha_cierre": "2026-04-17",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-27 @$45.945. Cierre @$45.01. Net EUR-23.64."
+    },
+    {
+      "ticker": "LUNR",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 25,
+      "net_pl_eur": 64.33,
+      "fecha_cierre": "2026-04-17",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-14 @$24.3586. Cierre @$27.75. Net EUR+64.33."
+    },
+    {
+      "ticker": "LUNR",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 20,
+      "net_pl_eur": 69.7,
+      "fecha_cierre": "2026-04-17",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-14 @$23.25. Cierre @$27.75. Net EUR+69.70."
+    },
+    {
+      "ticker": "SOFI",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 35,
+      "net_pl_eur": 68.93,
+      "fecha_cierre": "2026-04-17",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-03-19 @$16.925. Cierre @$20.0. Net EUR+68.93."
+    },
+    {
+      "ticker": "MEMS",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 100,
+      "net_pl_eur": -139.35,
+      "fecha_cierre": "2026-05-04",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-21 @EUR6.02. Cierre @EUR4.7. Net EUR-139.35."
+    },
+    {
+      "ticker": "MEMS",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 100,
+      "net_pl_eur": -58.35,
+      "fecha_cierre": "2026-05-04",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-24 @EUR5.21. Cierre @EUR4.7. Net EUR-58.35."
+    },
+    {
+      "ticker": "XE",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 17,
+      "net_pl_eur": -72.3,
+      "fecha_cierre": "2026-05-04",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-28 @$34.58. Cierre @$30.08. Net EUR-72.30."
+    },
+    {
+      "ticker": "APPLIE",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 18,
+      "net_pl_eur": 26.82,
+      "fecha_cierre": "2026-05-04",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-05-04 @$33.5. Cierre @$35.65. Net EUR+26.82."
+    },
+    {
+      "ticker": "OPTT",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 1500.0,
+      "net_pl_usd": -197.45,
+      "fecha_cierre": "2026-05-04",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-01-30 @$0.5053. Cierre @$0.3586. Net $-197.45."
+    },
+    {
+      "ticker": "HL",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 30.0,
+      "net_pl_usd": 2.0,
+      "fecha_cierre": "2026-05-06",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-04-28 @$17.65. Cierre @$17.8. Net $+2.00."
+    },
+    {
+      "ticker": "STNG",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 8,
+      "net_pl_eur": 53.03,
+      "fecha_cierre": "2026-05-08",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-20 @$74.49. Cierre @$83.32. Net EUR+53.03."
+    },
+    {
+      "ticker": "RKLB",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 5.0,
+      "net_pl_usd": -20.1,
+      "fecha_cierre": "2026-05-11",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-05-11 @$117.88. Cierre @$120.9. Net $-20.10."
+    },
+    {
+      "ticker": "DGXX",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 60.0,
+      "net_pl_usd": -29.0,
+      "fecha_cierre": "2026-05-11",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-05-11 @$7.65. Cierre @$8.05. Net $-29.00."
+    },
+    {
+      "ticker": "ASTS",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 10.0,
+      "net_pl_usd": 89.08,
+      "fecha_cierre": "2026-05-11",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-04-20 @$77.15. Cierre @$83.0. Net $+89.08."
+    },
+    {
+      "ticker": "BMW",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 10,
+      "net_pl_eur": -38.2,
+      "fecha_cierre": "2026-05-12",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-05-07 @EUR83.24. Cierre @EUR80.4. Net EUR-38.20."
+    },
+    {
+      "ticker": "RIB",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 40,
+      "net_pl_eur": -45.8,
+      "fecha_cierre": "2026-05-12",
+      "nota": "Backfill enero-mayo 2026 (extracto DeGiro Transactions.csv). Entrada 2026-04-22 @EUR13.12. Cierre @EUR12.22. Net EUR-45.80."
+    },
+    {
+      "ticker": "PYPL",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 11.0,
+      "net_pl_usd": -50.68,
+      "fecha_cierre": "2026-05-12",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-04-15 @$49.32. Cierre @$44.94. Net $-50.68."
+    },
+    {
+      "ticker": "DLO",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 39.0,
+      "net_pl_usd": -56.09,
+      "fecha_cierre": "2026-05-13",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-05-04 @$13.82. Cierre @$12.51. Net $-56.09."
+    },
+    {
+      "ticker": "RKLB",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 4.0,
+      "net_pl_usd": -27.76,
+      "fecha_cierre": "2026-05-14",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-05-13 @$126.31. Cierre @$132.0. Net $-27.76."
+    },
+    {
+      "ticker": "OSCR",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 25.0,
+      "net_pl_usd": 0.5,
+      "fecha_cierre": "2026-05-14",
+      "nota": "Backfill enero-mayo 2026 (extracto Colmex tradeHistory_COLH50450.csv). Entrada 2026-05-13 @$23.95. Cierre @$23.73. Net $+0.50."
+    },
+    {
+      "ticker": "DFDV",
+      "broker": "broker_1",
+      "net_pl_eur": -35.09,
+      "fecha_cierre": "2026-05-15",
+      "nota": "SL. Net -€35.09."
+    },
+    {
+      "ticker": "IONQ",
+      "broker": "broker_1",
+      "net_pl_eur": 133.76,
+      "fecha_cierre": "2026-05-22",
+      "nota": "TP @$63.00. Net +€133.76."
+    },
+    {
+      "ticker": "MRVL",
+      "broker": "broker_1",
+      "net_pl_eur": 111.8,
+      "fecha_cierre": "2026-05-26",
+      "nota": "Net +€111.80."
+    },
+    {
+      "ticker": "RGTI",
+      "broker": "broker_2",
+      "net_pl_usd": 76.5,
+      "fecha_cierre": "2026-05-26",
+      "nota": "Net +$76.50."
+    },
+    {
+      "ticker": "APP",
+      "broker": "broker_1",
+      "net_pl_eur": 140.12,
+      "fecha_cierre": "2026-05-27",
+      "nota": "TP $575.00. Net +€140.12."
+    },
+    {
+      "ticker": "NVO",
+      "broker": "broker_1",
+      "net_pl_eur": 20.99,
+      "fecha_cierre": "2026-05-27",
+      "nota": "Cierre manual. Net +€20.99."
+    },
+    {
+      "ticker": "AMD",
+      "broker": "broker_1",
+      "net_pl_eur": 83.34,
+      "fecha_cierre": "2026-05-28",
+      "nota": "TP $525.00. Net +€83.34."
+    },
+    {
+      "ticker": "IONQ",
+      "broker": "broker_2",
+      "net_pl_usd": 99.1,
+      "fecha_cierre": "2026-05-29",
+      "nota": "TP @$72.00. Net +$99.10."
+    },
+    {
+      "ticker": "CIFR",
+      "broker": "broker_1",
+      "net_pl_eur": -162.04,
+      "fecha_cierre": "2026-05-29",
+      "nota": "SL @$22.99. Net -€162.04."
+    },
+    {
+      "ticker": "CLSK",
+      "broker": "broker_1",
+      "net_pl_eur": 213.33,
+      "fecha_cierre": "2026-06-01",
+      "nota": "TP @$19.00. Net +€213.33."
+    },
+    {
+      "ticker": "NOW",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 7,
+      "entrada_usd": 134.48,
+      "cierre_usd": 125.25,
+      "net_pl_usd": 62.11,
+      "fecha_entrada": "2026-06-01",
+      "fecha_cierre": "2026-06-02",
+      "nota": "Net +$62.11."
+    },
+    {
+      "ticker": "OSCR",
       "broker": "broker_2",
       "direccion": "long",
       "cantidad": 25,
-      "entrada_usd": 24.64,
-      "cierre_usd": 28.0,
-      "net_pl_usd": 79.0,
-      "fecha_entrada": "2026-06-05",
-      "fecha_cierre": "2026-06-09",
-      "nota": "TP $28.00 ejecutado. Net estimado +$79.00."
+      "entrada_usd": 22.42,
+      "cierre_usd": 20.88,
+      "net_pl_usd": -41.0,
+      "fecha_entrada": "2026-05-22",
+      "fecha_cierre": "2026-06-02",
+      "nota": "SL @$20.88. Net -$41.00."
+    },
+    {
+      "ticker": "TSLA",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 4,
+      "entrada_usd": 417.06,
+      "cierre_usd": 422.41,
+      "net_pl_eur": 13.13,
+      "fecha_entrada": "2026-06-02",
+      "fecha_cierre": "2026-06-03",
+      "nota": "Net ~+€13."
+    },
+    {
+      "ticker": "GOOGL",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 2,
+      "entrada_usd": 363.95,
+      "cierre_usd": 360.04,
+      "net_pl_usd": 2.82,
+      "fecha_entrada": "2026-06-02",
+      "fecha_cierre": "2026-06-03",
+      "nota": "Net +$2.82."
+    },
+    {
+      "ticker": "CRCL",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 5,
+      "entrada_usd": 101.11,
+      "cierre_usd": 92.95,
+      "net_pl_usd": 35.8,
+      "fecha_entrada": "2026-06-02",
+      "fecha_cierre": "2026-06-03",
+      "nota": "Net +$35.80."
+    },
+    {
+      "ticker": "AMD",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 2,
+      "entrada_usd": 542.3,
+      "cierre_usd": 509.49,
+      "net_pl_usd": 63.12,
+      "fecha_entrada": "2026-06-03",
+      "fecha_cierre": "2026-06-04",
+      "nota": "Net +$63.12."
     },
     {
       "ticker": "NVO",
       "broker": "broker_2",
       "direccion": "short",
-      "cantidad": 20,
-      "entrada_usd": 41.57,
-      "cierre_usd": 38.57,
-      "net_pl_usd": 55.0,
-      "fecha_entrada": "2026-06-08",
-      "fecha_cierre": "2026-06-09",
-      "nota": "TP $38.57 ejecutado. Net estimado +$55.00."
-    },
-    {
-      "ticker": "AAPL",
-      "broker": "broker_1",
-      "direccion": "long",
-      "cantidad": 5,
-      "entrada_usd": 307.827,
-      "cierre_usd": 298.03,
-      "net_pl_eur": -51.59,
-      "fecha_entrada": "2026-06-04",
-      "fecha_cierre": "2026-06-09",
-      "nota": "Cerrada manualmente @$298.03. Net -€51.59."
+      "cantidad": 12,
+      "entrada_usd": 42.15,
+      "cierre_usd": 43.17,
+      "net_pl_usd": -17.24,
+      "fecha_entrada": "2026-06-03",
+      "fecha_cierre": "2026-06-04",
+      "nota": "SL @$43.17. Net -$17.24."
     },
     {
       "ticker": "CRM",
@@ -161,158 +898,78 @@
       "nota": "SL @$10.90. Net -$117.70."
     },
     {
-      "ticker": "AMD",
-      "broker": "broker_2",
-      "direccion": "short",
-      "cantidad": 2,
-      "entrada_usd": 542.3,
-      "cierre_usd": 509.49,
-      "net_pl_usd": 63.12,
-      "fecha_entrada": "2026-06-03",
-      "fecha_cierre": "2026-06-04",
-      "nota": "Net +$63.12."
-    },
-    {
-      "ticker": "NVO",
-      "broker": "broker_2",
-      "direccion": "short",
-      "cantidad": 12,
-      "entrada_usd": 42.15,
-      "cierre_usd": 43.17,
-      "net_pl_usd": -17.24,
-      "fecha_entrada": "2026-06-03",
-      "fecha_cierre": "2026-06-04",
-      "nota": "SL @$43.17. Net -$17.24."
-    },
-    {
-      "ticker": "TSLA",
-      "broker": "broker_1",
-      "direccion": "long",
-      "cantidad": 4,
-      "entrada_usd": 417.06,
-      "cierre_usd": 422.41,
-      "net_pl_eur": 13.13,
-      "fecha_entrada": "2026-06-02",
-      "fecha_cierre": "2026-06-03",
-      "nota": "Net ~+€13."
-    },
-    {
-      "ticker": "GOOGL",
-      "broker": "broker_2",
-      "direccion": "short",
-      "cantidad": 2,
-      "entrada_usd": 363.95,
-      "cierre_usd": 360.04,
-      "net_pl_usd": 2.82,
-      "fecha_entrada": "2026-06-02",
-      "fecha_cierre": "2026-06-03",
-      "nota": "Net +$2.82."
-    },
-    {
-      "ticker": "CRCL",
-      "broker": "broker_2",
-      "direccion": "short",
-      "cantidad": 5,
-      "entrada_usd": 101.11,
-      "cierre_usd": 92.95,
-      "net_pl_usd": 35.8,
-      "fecha_entrada": "2026-06-02",
-      "fecha_cierre": "2026-06-03",
-      "nota": "Net +$35.80."
-    },
-    {
-      "ticker": "NOW",
-      "broker": "broker_2",
-      "direccion": "short",
-      "cantidad": 7,
-      "entrada_usd": 134.48,
-      "cierre_usd": 125.25,
-      "net_pl_usd": 62.11,
-      "fecha_entrada": "2026-06-01",
-      "fecha_cierre": "2026-06-02",
-      "nota": "Net +$62.11."
-    },
-    {
-      "ticker": "OSCR",
+      "ticker": "WULF",
       "broker": "broker_2",
       "direccion": "long",
       "cantidad": 25,
-      "entrada_usd": 22.42,
-      "cierre_usd": 20.88,
-      "net_pl_usd": -41.0,
-      "fecha_entrada": "2026-05-22",
-      "fecha_cierre": "2026-06-02",
-      "nota": "SL @$20.88. Net -$41.00."
+      "entrada_usd": 24.64,
+      "cierre_usd": 28.0,
+      "net_pl_usd": 79.0,
+      "fecha_entrada": "2026-06-05",
+      "fecha_cierre": "2026-06-09",
+      "nota": "TP $28.00 ejecutado. Net estimado +$79.00."
     },
     {
-      "ticker": "CLSK",
-      "broker": "broker_1",
-      "net_pl_eur": 213.33,
-      "fecha_cierre": "2026-06-01",
-      "nota": "TP @$19.00. Net +€213.33."
-    },
-    {
-      "ticker": "IONQ",
+      "ticker": "NVO",
       "broker": "broker_2",
-      "net_pl_usd": 99.1,
-      "fecha_cierre": "2026-05-29",
-      "nota": "TP @$72.00. Net +$99.10."
+      "direccion": "short",
+      "cantidad": 20,
+      "entrada_usd": 41.57,
+      "cierre_usd": 38.57,
+      "net_pl_usd": 55.0,
+      "fecha_entrada": "2026-06-08",
+      "fecha_cierre": "2026-06-09",
+      "nota": "TP $38.57 ejecutado. Net estimado +$55.00."
     },
     {
-      "ticker": "CIFR",
+      "ticker": "AAPL",
       "broker": "broker_1",
-      "net_pl_eur": -162.04,
-      "fecha_cierre": "2026-05-29",
-      "nota": "SL @$22.99. Net -€162.04."
+      "direccion": "long",
+      "cantidad": 5,
+      "entrada_usd": 307.827,
+      "cierre_usd": 298.03,
+      "net_pl_eur": -51.59,
+      "fecha_entrada": "2026-06-04",
+      "fecha_cierre": "2026-06-09",
+      "nota": "Cerrada manualmente @$298.03. Net -€51.59."
     },
     {
       "ticker": "AMD",
       "broker": "broker_1",
-      "net_pl_eur": 83.34,
-      "fecha_cierre": "2026-05-28",
-      "nota": "TP $525.00. Net +€83.34."
+      "direccion": "long",
+      "cantidad": 2,
+      "entrada_usd": 481.87,
+      "cierre_usd": 463.0,
+      "net_pl_eur": -39.68,
+      "fecha_entrada": "2026-06-09",
+      "fecha_cierre": "2026-06-10",
+      "nota": "SL ejecutado @$463.00. Entrada $481.87. Comisiones -€4.08. Net -€39.68."
     },
     {
-      "ticker": "APP",
-      "broker": "broker_1",
-      "net_pl_eur": 140.12,
-      "fecha_cierre": "2026-05-27",
-      "nota": "TP $575.00. Net +€140.12."
-    },
-    {
-      "ticker": "NVO",
-      "broker": "broker_1",
-      "net_pl_eur": 20.99,
-      "fecha_cierre": "2026-05-27",
-      "nota": "Cierre manual. Net +€20.99."
-    },
-    {
-      "ticker": "MRVL",
-      "broker": "broker_1",
-      "net_pl_eur": 111.8,
-      "fecha_cierre": "2026-05-26",
-      "nota": "Net +€111.80."
-    },
-    {
-      "ticker": "RGTI",
+      "ticker": "KGC",
       "broker": "broker_2",
-      "net_pl_usd": 76.5,
-      "fecha_cierre": "2026-05-26",
-      "nota": "Net +$76.50."
+      "direccion": "short",
+      "cantidad": 30,
+      "entrada_usd": 24.99,
+      "cierre_usd": 24.47,
+      "gross_pl_usd": 15.6,
+      "net_pl_usd": 5.6,
+      "fecha_entrada": "2026-06-09",
+      "fecha_cierre": "2026-06-10",
+      "nota": "SHORT @$24.99. Cobertura @$24.47 (apertura). Gross +$15.60. Net ~+$5.60. TP $22.50 no alcanzado — cierre manual."
     },
     {
-      "ticker": "IONQ",
-      "broker": "broker_1",
-      "net_pl_eur": 133.76,
-      "fecha_cierre": "2026-05-22",
-      "nota": "TP @$63.00. Net +€133.76."
-    },
-    {
-      "ticker": "DFDV",
-      "broker": "broker_1",
-      "net_pl_eur": -35.09,
-      "fecha_cierre": "2026-05-15",
-      "nota": "SL. Net -€35.09."
+      "ticker": "HIMS",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 50,
+      "entrada_usd": 28.25,
+      "cierre_usd": 28.85,
+      "gross_pl_usd": 30.0,
+      "net_pl_usd": 25.0,
+      "fecha_entrada": "2026-06-09",
+      "fecha_cierre": "2026-06-10",
+      "nota": "SL trailing @$28.85 (16:31). Net ~+$25. Re-entrada abierta broker_1 @$27.83 (25 acc, 10/06 21:39)."
     },
     {
       "ticker": "AAPU",
@@ -425,6 +1082,75 @@
       "hora_entrada": "20:49:48",
       "hora_cierre": "15:44:25",
       "nota": "30/07 CONFIRMADO (historico de ordenes Colmex). Venta (apertura corto) 4 @$174.68 limitada, 29/07 20:49:48, Ejecutadas. Compra (cobertura) 4 @$205.28 a mercado, 30/07 15:44:25, Ejecutadas. Gross (174.68-205.28)*4 = -$122.40, fees round-trip -$5.00, net -$127.40. CAUSA: corto abierto el 29/07 ya con el rally de earnings en marcha (Bloom Energy publico record Q2 2026 -- ingresos $1.07B vs $827M esperado, BPA $0.78 vs $0.41, guidance FY26 subida a $3.9-4.2B, backlog $20B -- el 28/07 tras cierre). El sentiment analyst SI detecto el catalizador (sentiment_score_normalized 8.9, catalyst_found=True) y el resumen de riesgo avisaba en texto de 'riesgo de short squeeze', pero nada lo convertia en veto duro. El stop se amplio manualmente el 30/07 de $172.93 a $188.16 dandole mas margen, pero el gap salto por encima igualmente y la cobertura llego a $205.28 con fuerte slippage. MOTIVO la nueva regla R8 (short_bullish_catalyst_guard, utils/risk_policy.py): degrada a WATCH cualquier corto con catalyst_found=True y sentiment_score_normalized >= 7.5. Ya validada en la corrida del 30/07: bloqueo XPEV (8.1) y CRWD (7.6)."
+    },
+    {
+      "ticker": "ZAL",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 25,
+      "entrada_eur": 26.97,
+      "cierre_eur": 28.53,
+      "gross_pl_eur": 39.0,
+      "net_pl_eur": 29.2,
+      "fecha_cierre": "2026-07-31",
+      "hora_cierre": "09:00",
+      "nota": "31/07 CONFIRMADO (extracto DeGiro). Venta 25 @EUR28.53 (com. -EUR4.90) / Compra 25 @EUR26.97 (com. -EUR4.90). Net +EUR29.20 (gross +EUR39.00). Stop saltado en la apertura."
+    },
+    {
+      "ticker": "EWS",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 25,
+      "entrada_usd": 31.52,
+      "cierre_usd": 32.08,
+      "gross_pl_usd": 14.12,
+      "net_pl_usd": 11.62,
+      "fecha_cierre": "2026-07-31",
+      "hora_cierre": "15:43:30",
+      "nota": "31/07 CONFIRMADO (historico Colmex: Vender Stop Loss 25 @$32.08). Stop trailado $32.09. Net +$11.62."
+    },
+    {
+      "ticker": "VRNS",
+      "broker": "broker_2",
+      "direccion": "short",
+      "cantidad": 13,
+      "entrada_usd": 41.63,
+      "cierre_usd": 40.29,
+      "gross_pl_usd": 17.42,
+      "net_pl_usd": 14.92,
+      "fecha_cierre": "2026-07-31",
+      "hora_cierre": "15:33:34",
+      "nota": "31/07 CONFIRMADO (historico Colmex: Comprar cobertura 13 @$40.29). Stop trailado $41.03. Net +$14.92."
+    },
+    {
+      "ticker": "CMCSA",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 25,
+      "entrada_usd": 23.77,
+      "cierre_usd": 24.09,
+      "gross_pl_usd": 8.0,
+      "net_pl_usd": 5.5,
+      "fecha_entrada": "2026-07-31",
+      "fecha_cierre": "2026-07-31",
+      "hora_entrada": "16:34:27",
+      "hora_cierre": "20:45:16",
+      "nota": "31/07 CONFIRMADO (historico Colmex). Scalp intradia desde seguimiento: compra 25 @$23.77 limitada, venta 25 @$24.09 mercado. Net +$5.50."
+    },
+    {
+      "ticker": "PANW",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 3,
+      "entrada_usd": 332.44,
+      "cierre_usd": 334.79,
+      "gross_pl_usd": 7.05,
+      "net_pl_usd": 4.55,
+      "fecha_entrada": "2026-07-31",
+      "fecha_cierre": "2026-08-03",
+      "hora_entrada": "20:45:23",
+      "hora_cierre": "16:27:08",
+      "nota": "03/08 CONFIRMADO (historico de ordenes Colmex: Vender 3 @$334.79 a mercado, 16:27:08, Ejecutadas). Compra 3 @$332.44 a mercado (31/07 20:45:23, Ejecutadas). Gross (334.79-332.44)*3 = +$7.05, net +$4.55 tras fee -$2.50. Ganadora modesta, practicamente scratch; cerrada para liberar margen (mismo dia se abrio CRWD)."
     }
   ]
 }
