@@ -5,6 +5,7 @@
 > **Ámbito:** política de exposición, concentración y sizing. NO toca los indicadores técnicos del pipeline.
 >
 > **2026-07-30:** **R8 nueva** (guarda de catalizador de sentiment alcista en cortos, caso BE) en `utils/risk_policy.py` (`short_bullish_catalyst_guard`), aplicada en `orchestrator._merge_and_rank`. Fix de bug relacionado en `FundamentalAnalyst._parse_earnings_days` (earnings de ayer se calculaba como "364 días", desactivando de facto cualquier lectura de proximidad de earnings). Tests en `tests/test_earnings_parsing.py` y ampliación de `tests/test_risk_policy.py`.
+> **2026-08-04:** **R9 nueva** (guarda de evento macro de alto impacto) — calendario económico (feed público de Forex Factory, `data/economic_calendar.py`) + `utils/risk_policy.py` (`macro_event_guard`), aplicada en `orchestrator._apply_macro_event_guard`. Los eventos de alto impacto (FOMC, CPI, NFP...) además se sincronizan como eventos en el Google Calendar personal del operador para visibilidad. Tests en `tests/test_economic_calendar.py` y `tests/test_macro_event_guard.py`.
 
 ---
 
@@ -108,6 +109,19 @@ Si el `NewsSentimentAnalyst` encuentra un catalizador reciente (`catalyst_found=
 >
 > **Cautelas.** Umbral (7.5) es una primera aproximación, sin backtest — igual que R7 en su día. Solo actúa cuando `catalyst_found=True`; un sentiment alcista "de fondo" sin evento fresco identificado no dispara el guard (evita ser demasiado restrictivo con cortos en nombres que simplemente tienen buena prensa reciente).
 
+### R9 — Guarda de evento macro de alto impacto (nueva 2026-08-04)
+Si el calendario económico marca un evento de **alto impacto** (`impact=High`, filtrado por `MACRO_EVENT_COUNTRIES`, por defecto solo USD) programado **hoy**, no se abren posiciones **nuevas** ese día: cualquier BUY/STRONG BUY/SELL/STRONG SELL se degrada a WATCH, en **ambas direcciones** (a diferencia de R4/R8, que solo tocan cortos). No afecta a la cartera ya abierta. Implementado en `macro_event_guard()` (`utils/risk_policy.py`) sobre los eventos que devuelve `get_high_impact_events()` (`data/economic_calendar.py`), aplicado en `orchestrator._apply_macro_event_guard` (después de R7, antes de R1/R2/R6).
+
+> **Motivación.** Eventos como la decisión de tipos de la Fed, el CPI o el informe de empleo (NFP) mueven el mercado de forma binaria e impredecible en cualquier dirección — pueden ser el catalizador de un movimiento fuerte o un cisne negro para una posición recién abierta, y ninguna de las señales técnicas del pipeline los anticipa. Ante esa incertidumbre, el día del evento no se abre riesgo nuevo; se puede seguir operando con normalidad al día siguiente, cuando el dato ya está descontado.
+>
+> **Fuente de datos.** Feed JSON público que usa el propio widget de calendario de Forex Factory (`nfs.faireconomy.media/ff_calendar_thisweek.json`), sin API key. Solo cubre la semana en curso (no existe un feed público "próxima semana" fiable) — el R9 solo necesita el día de hoy, así que no es una limitación para el guard. Forex Factory limita las descargas del fichero semanal a 2 cada 5 minutos; se cachea en disco (`ECONOMIC_CALENDAR_CACHE_TTL_HOURS`, 6h) para no acercarse a ese límite con las dos corridas diarias.
+>
+> **Fail-open.** Si el feed falla (red caída, cambio de formato), el guard no bloquea el pipeline — se registra el error en el log y se continúa sin la guarda, igual que el resto de fases opcionales del pipeline.
+>
+> **Sincronización con Google Calendar.** Los eventos de alto impacto detectados también se crean como eventos en el calendario personal del operador (fuera del pipeline Python, vía el conector MCP de Google Calendar de Claude Code) para que sean visibles junto al resto de la agenda. Es un paso manual/asistido por Claude por ahora, no un cron automático — pendiente decidir si se automatiza con una tarea programada (§6).
+>
+> **Cautelas.** Cobertura solo USD por defecto (`MACRO_EVENT_COUNTRIES`) — coherente con que broker_2 (donde van los cortos) solo opera NYSE/NASDAQ, pero un evento europeo fuerte podría mover algún nombre de broker_1. Umbral de impacto (`MACRO_EVENT_MIN_IMPACT="High"`) sin backtest, primera aproximación igual que R7/R8 en su día — revisar si conviene incluir "Medium" o acotar a una lista explícita de eventos (FOMC/CPI/NFP/PCE) en vez de fiarse de la etiqueta de impacto del feed.
+
 ### R4 — Cortos (sin cambios estructurales)
 Los cortos realizados funcionaron (6/7 ganadores, +207). Se mantienen las reglas vigentes: solo Broker 2, gated por régimen (no abrir en *Strong Uptrend*), entrada en pullback a EMA9. Esta spec no los modifica.
 
@@ -182,6 +196,12 @@ RECENT_LOSS_MIN_ABS       = 10.0
 
 # R8 — Guarda de catalizador de sentiment alcista en cortos
 SHORT_BULLISH_CATALYST_MIN = 7.5
+
+# R9 — Guarda de evento macro de alto impacto (calendario económico)
+ECONOMIC_CALENDAR_URL             = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+ECONOMIC_CALENDAR_CACHE_TTL_HOURS = 6
+MACRO_EVENT_COUNTRIES             = ["USD"]
+MACRO_EVENT_MIN_IMPACT            = "High"
 ```
 
 > Estos valores viven aquí como **decisión** y están replicados en `config.py`. La clasificación de tiers (§2) y sub-temas vive en `utils/risk_policy.py` como **semilla editable**: los nombres no listados se clasifican por capitalización (>=100B→A, >=15B→B, resto→C/otros). Conviene revisar la taxonomía periódicamente (§5).

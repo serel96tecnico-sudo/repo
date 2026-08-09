@@ -181,6 +181,18 @@ RECENT_LOSS_MIN_ABS = 10.0   # pérdida neta mín. (€/$ abs.) para contar como
 # orchestrator._merge_and_rank (utils.risk_policy.short_bullish_catalyst_guard).
 SHORT_BULLISH_CATALYST_MIN = 7.5
 
+# R9 (nueva 2026-08-04) — Guarda de evento macro de alto impacto (calendario económico).
+# Fuente: feed público de Forex Factory (nfs.faireconomy.media/ff_calendar_thisweek.json),
+# sin API key — ver data/economic_calendar.py. Un evento de alto impacto (FOMC, CPI, NFP...)
+# el mismo día puede ser catalizador o cisne negro en cualquier dirección: ante la
+# incertidumbre no se abren NUEVAS posiciones ese día (se degradan a WATCH); no toca la
+# cartera existente. Aplicado en orchestrator._apply_macro_event_guard
+# (utils.risk_policy.macro_event_guard).
+ECONOMIC_CALENDAR_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+ECONOMIC_CALENDAR_CACHE_TTL_HOURS = 6   # FF limita a 2 descargas/5min del fichero semanal
+MACRO_EVENT_COUNTRIES = ["USD"]         # watchlist mayoritariamente US; broker_2 solo NYSE/NASDAQ
+MACRO_EVENT_MIN_IMPACT = "High"
+
 # ── Seguimiento (vigilancia de extendidos para entrada en pullback) ──────────
 # La lista era append-only y acumulaba tickers con precios de referencia de hace
 # semanas ("esperar pullback a $478" cuando ya no significa nada). Una entrada

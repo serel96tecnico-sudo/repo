@@ -1,6 +1,6 @@
 {
   "description": "DeGiro favourites list",
-  "updated": "2026-08-03",
+  "updated": "2026-08-06",
   "entries": [
     {
       "ticker": "AAPL",
@@ -583,27 +583,7 @@
       "source": "manual"
     },
     {
-      "ticker": "VEEE",
-      "added": "2026-07-27",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ADSK",
-      "added": "2026-07-27",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ZBIO",
-      "added": "2026-07-27",
-      "source": "long_screener"
-    },
-    {
       "ticker": "VELO",
-      "added": "2026-07-29",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ARTV",
       "added": "2026-07-29",
       "source": "long_screener"
     },
@@ -635,6 +615,41 @@
     {
       "ticker": "AVR",
       "added": "2026-08-03",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "NXTC",
+      "added": "2026-08-04",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "WGS",
+      "added": "2026-08-04",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "HLNE",
+      "added": "2026-08-05",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "SPGI",
+      "added": "2026-08-05",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "CRH",
+      "added": "2026-08-05",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "TPC",
+      "added": "2026-08-06",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "UUUU",
+      "added": "2026-08-06",
       "source": "long_screener"
     }
   ],
@@ -755,16 +770,19 @@
     "VRNS",
     "WULF",
     "XPEV",
-    "VEEE",
-    "ADSK",
-    "ZBIO",
     "VELO",
-    "ARTV",
     "ABTC",
     "FBRT",
     "ASST",
     "FOSL",
     "SONO",
-    "AVR"
+    "AVR",
+    "NXTC",
+    "WGS",
+    "HLNE",
+    "SPGI",
+    "CRH",
+    "TPC",
+    "UUUU"
   ]
 }

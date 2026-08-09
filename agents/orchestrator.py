@@ -15,8 +15,9 @@ from config import (
 )
 from utils.risk_policy import (
     build_tier_map, classify_tier, high_beta_cap, is_high_beta, is_explicitly_classified,
-    open_position_risk, recent_loss_cooldown, short_bullish_catalyst_guard,
+    open_position_risk, recent_loss_cooldown, short_bullish_catalyst_guard, macro_event_guard,
 )
+from data.economic_calendar import get_high_impact_events
 from agents.market_scanner import MarketScanner
 from agents.fundamental_analyst import FundamentalAnalyst
 from agents.technical_analyst import TechnicalAnalyst
@@ -140,6 +141,7 @@ class TradingOrchestrator:
         final_candidates = self._merge_and_rank(risk_results, ta_map, sentiment_map, scan_result, fund_map)
         final_candidates = self._apply_trend_strength_gate(final_candidates)   # filtro C
         final_candidates = self._apply_recent_loss_cooldown(final_candidates, portfolio)
+        final_candidates = self._apply_macro_event_guard(final_candidates)     # R9
         final_candidates = self._apply_exposure_caps(
             final_candidates, tier_map, portfolio, market_conditions
         )
@@ -495,6 +497,34 @@ class TradingOrchestrator:
                     f"R7 enfriamiento: {fc.ticker} cerró {entry['pl']:+.0f} "
                     f"hace {entry['days_ago']}d (< {RECENT_LOSS_COOLDOWN_DAYS}d)"
                 )
+        return final
+
+    def _apply_macro_event_guard(self, final) -> list:
+        """R9 — Guarda de evento macro de alto impacto (calendario económico).
+
+        Un evento de alto impacto hoy (FOMC, CPI, NFP...) puede resolverse como
+        catalizador o como cisne negro en cualquier dirección; ante esa incertidumbre
+        no se abren posiciones NUEVAS ese día — se degradan a WATCH tanto longs como
+        cortos. No toca la cartera existente. Si el feed del calendario falla, no
+        bloquea el pipeline (fail-open): se registra el error y se sigue sin guarda.
+        """
+        if not final:
+            return final
+        try:
+            events = get_high_impact_events()
+        except Exception as e:
+            self.logger.warning(f"R9: no se pudo obtener el calendario económico: {e}")
+            return final
+
+        if not macro_event_guard(events):
+            return final
+
+        titles = ", ".join(e["title"] for e in events)
+        self.logger.info(f"R9: evento(s) macro de alto impacto hoy — {titles}")
+        for fc in final:
+            if fc.recommendation not in ("BUY", "STRONG BUY", "SELL", "STRONG SELL"):
+                continue
+            self._demote(fc, f"R9: evento macro de alto impacto hoy ({titles})")
         return final
 
     def _apply_trend_strength_gate(self, final) -> list:

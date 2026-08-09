@@ -9,6 +9,7 @@ contex/price_alerts.json
 contex/daily_state_*.json
 contex/ticker_universe_*.json
 contex/fundamentals_cache.json
+contex/economic_calendar_cache.json
 contex/vix_last.json
 contex/tv_drawn_levels.json
 

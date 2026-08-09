@@ -83,6 +83,91 @@ Los netos en EUR que no vengan del extracto del broker se marcan como **ESTIMADO
 
 ---
 
+## 2026-08-04 — R9 nueva: calendario económico + guarda de evento macro de alto impacto
+
+El operador pidió "conectar el calendario personal con un calendario económico" para
+tener en cuenta eventos macro (catalizador o cisne negro) al operar. Dos piezas:
+
+1. **`data/economic_calendar.py`** (nuevo) — descarga el feed público de Forex Factory
+   (`nfs.faireconomy.media/ff_calendar_thisweek.json`, sin API key; busqué en GitHub un
+   script existente para esto — los que hay son o manuales (fxstreet CSV) o requieren
+   Selenium; este feed JSON directo es el que usan la mayoría de bots/indicadores y no
+   necesita browser). Cachea en disco (`contex/economic_calendar_cache.json`, TTL 6h)
+   porque FF limita a 2 descargas/5min del fichero semanal.
+2. **R9** (`utils/risk_policy.py:macro_event_guard` + `orchestrator._apply_macro_event_guard`) —
+   si hay un evento `impact=High` de `MACRO_EVENT_COUNTRIES` (USD por defecto) programado
+   HOY, cualquier BUY/STRONG BUY/SELL/STRONG SELL nuevo se degrada a WATCH (ambas
+   direcciones, a diferencia de R4/R8). No toca la cartera existente. Fail-open si el
+   feed falla. Aplicado después de R7, antes de R1/R2/R6.
+
+**Google Calendar.** Además, sincronicé (una vez, manual) el evento de alto impacto de
+esta semana (NFP del 07/08, 08:30 ET) al calendario personal del operador
+(`serel96tecnico@gmail.com`) vía el conector MCP de Google Calendar — esto es una acción
+de Claude en la sesión, NO código Python del pipeline (el pipeline no tiene credenciales
+de Google, ni las necesita para R9). Pendiente decidir con el operador si se quiere
+automatizar con una tarea programada semanal (repetir esta sincronización cada semana) o
+se hace a mano/pidiéndolo en sesión.
+
+Detalle completo, motivación y cautelas en `docs/estrategia_riesgo.md` §3 (R9) y cabecera.
+Tests: `tests/test_economic_calendar.py`, `tests/test_macro_event_guard.py`.
+
+## 2026-08-04 — Sistema de alertas de pullback armadas (Telegram), no documentado hasta ahora
+
+No estaba en `CLAUDE.md` ni aquí. Es una capa de **seguimiento** aparte del pipeline diario: cuando
+un candidato queda en WATCH con una condición de entrada pendiente (ej. "esperar retroceso limpio
+al EMA9"), este sistema lo vigila y avisa por Telegram en el momento en que el precio cumple esa
+condición — para no perderse el punto de entrada de un setup que el pipeline ya propuso pero que no
+era accionable ese mismo día. Piezas:
+
+- **`scripts/arm_alerts.py`** — "arma" el trigger de pullback (`pullback_to_ema9`) de un candidato
+  con el score y ATR del día en que se propuso (ej. ILF armada 31/07, score 6.62).
+- **`scripts/price_watcher.py`** — vigila el precio y dispara la alerta por Telegram cuando toca
+  el nivel armado. El mensaje incluye stop/T1 **recalculados** al precio del disparo (no los del
+  momento del armado) y un aviso explícito: *"Falta antes de entrar: tamaño (R3/VIX) y validar
+  R1/R2/R6/R7 contra la cartera actual. El stop guardado en el armado NO sirve a este precio."*
+- **`agents/portfolio_watchdog.py`** — vigilancia de posiciones ya abiertas (riesgo de earnings
+  próximos, etc.), sistema distinto al del seguimiento de setups.
+
+**Importante:** la validación R1/R2/R6/R7 que pide el propio mensaje de la alerta es **manual, no
+automática** — ninguno de estos scripts vuelve a correr `orchestrator._apply_exposure_caps`; el
+diseño delega esa comprobación al operador en el momento de la entrada, no la bloquea. Caso real
+04/08: alerta de ILF disparada y operada (22 @ $35.14, SL $34.21, TP $38.30), pero el informe diario
+del pipeline de ese mismo día tenía ILF en WATCH bloqueada por el cap R1 de alta beta (80%
+superado) con el mismo score (6.62) — la alerta avisaba de validarlo, no consta si se hizo antes de
+entrar.
+
+## 2026-08-06 — RESUELTO: BEP de TSM vs precio de ejecucion (403.67 es el STOP, no el BEP)
+
+Cierre del 06/08 (broker_1): TSM abierta hoy (2 acciones). La tabla de posiciones mostraba
+**$403.67** junto al BEP, pero el extracto de transacciones de DeGiro confirmo la compra a
+**$413.28** (2 @, valor -EUR716.26, autoFX -EUR1.79, comision -EUR2.00, coste total EUR720.05).
+**Confirmado por el operador el mismo dia: $403.67 es el STOP LOSS**, no el BEP -- la lectura
+inicial de la tabla de posiciones que emparejaba ambos numeros era enganosa. BEP real = $413.28.
+Consecuencia real: el stop ($403.67) queda **por debajo del coste** ($413.28), exponiendo
+~$9.61/accion (~EUR16.65 en 2 acciones) de riesgo abierto -- NO es un stop a breakeven como
+parecia. Ver `contex/portfolio.json` (acciones/TSM, campo `orden_pendiente` actualizado con la
+advertencia) y `trades_historico.json`. Leccion para el futuro: en la tabla de posiciones de
+DeGiro, comprobar si un numero que "coincide" con el stop es realmente el BEP antes de asumir
+que la posicion esta protegida -- verificar contra el extracto de transacciones cuando haya duda.
+
+## 2026-08-07 — Cierre del día (viernes) y cierre semanal
+
+Sin cierres/aperturas nuevas en ningún broker (verificado: "Hoy no tiene transacciones" en
+DeGiro, 3 posiciones sin cambios en Colmex) — solo mark-to-market + 2 stops trailados en
+broker_2 (CRWD $196.00→$201.33, DXCM $78.12→$78.39). `trades_historico.json` NO se tocó
+(nada que añadir). `portfolio.json` actualizado: `last_updated`, `cambios` (día + resumen
+semanal 03/08-07/08), balances de ambos brokers y cada posición/ETF.
+
+**Resumen semanal (03/08-07/08):** 5 cierres — PANW (+$4.55), BRKR (-$58.40, gap ~20% con
+slippage), ANF (+EUR48.96), BAC (+EUR5.35), NVDA (+EUR69.38); realizado broker_1 +EUR123.69,
+broker_2 -$53.85. 5 aperturas — CRWD, ILF (vía alerta de pullback), GLDA, PSX (reentrada),
+TSM. broker_1 total B/P mejoró EUR-838.53→EUR-720.64 (+EUR117.89), con una retirada de
+caja -EUR400 (04/08, no ligada a trading) que enmascara la mejora en `cuenta_completa`.
+broker_2 balance sin cambios en la semana ($2,476.46).
+
+**Pendiente recurrente:** GLDA sigue sin stop-loss configurado (4 días seguidos, 05/08→07/08) —
+seguir preguntando al operador hasta que se confirme o se ponga uno.
+
 ## Registro de decisiones / gotchas
 
 - **2026-07-22** — Creado este fichero (opción A) como memoria persistente fiable, cargada vía `CLAUDE.md`. claude-mem queda como capa automática de fondo tras reactivar su worker con Bun.
@@ -124,3 +209,53 @@ para el MA200 semanal/diario) tiene el mismo problema — sesga sistemáticament
 **Fix:** `adjustment=Adjustment.ALL` añadido a los dos `StockBarsRequest` de `market_data.py`
 (`_fetch_ohlcv_alpaca` y `_fetch_batch_quotes_alpaca`). Verificado en vivo: high_52w de CRWD
 pasa a 217,355, coincide con TradingView. Detalle en `docs/estrategia_riesgo.md` §9.
+
+## 2026-08-09 — Reconciliación completa de `trades_historico.json` contra extractos reales (NO revertir sin re-auditar)
+
+El operador pidió el track record 2026 y, al contrastarlo con capturas puntuales de Colmex
+(AAPU, LMND), aparecieron errores de comisión. Eso escaló a una reconciliación completa de
+**ambos brokers** contra sus fuentes primarias:
+
+- **broker_2 (Colmex)**: `tradeHistory_COLH50450.csv` (histórico de ejecuciones, con
+  `PositionId` para agrupar) + `pl-report_COLH50450.csv` (P/L diario oficial del broker,
+  usado como **validación independiente** — el gross realizado y la comisión total cuadraron
+  al céntimo: -$468.12 y -$477.62 respectivamente).
+- **broker_1 (DeGiro)**: `Transactions.csv` (histórico de transacciones; sin `PositionId`,
+  reconstruido agrupando por ISIN/producto con cantidad acumulada — un bloque se cierra
+  cuando la cantidad neta vuelve a 0). Sin reporte de P/L diario propio para verificación
+  cruzada como en Colmex, pero la comparación ticker-por-ticker (suma neta agregada, no por
+  lote individual) cuadró exactamente en todos los tickers salvo los que cruzan a 2025 (BTC,
+  JMIA, DLO, NFLX — ya registrados correctamente con su pata de 2025 fuera del extracto).
+
+**Errores encontrados (patrones, no casos aislados):**
+1. **Comisión mal contada** — el patrón más frecuente: se restaba una sola comisión (-$2.50)
+   cuando la operación tuvo 2 o 3 ejecuciones (compra+venta, o 2 compras+venta) a $2.50 cada
+   una. Afectó a más de una decena de trades en broker_2.
+2. **Precio de cierre incorrecto en 2 casos** (WULF y NVO, ambos 09/06 broker_2): se había
+   registrado el **TP objetivo planeado** como si fuera el precio de ejecución real, en vez
+   de esperar la confirmación del fill. WULF pasó de +$79 (ficticio) a +$15.50 (real); NVO de
+   +$55 a -$0.40.
+3. **Operaciones enteras nunca registradas** — el problema mayor en volumen: **33 en
+   broker_2** y **23 en broker_1** (56 en total) faltaban por completo del histórico, muchas
+   perdedoras grandes (SMR -$156.70, INTC -$117.68/-$178.08€, IONQ -€230.65, RXT -$101.00,
+   QBTS -$92.00 en broker_2; el ticker INTC no existía siquiera en broker_1 antes de esto).
+
+**Resultado (2026 completo, 179 trades cerrados, antes 121):**
+
+| | Antes de reconciliar | Después (real) |
+|---|---|---|
+| broker_1 (EUR) | -262,78 € (67 trades) | **-655,02 €** (90 trades) |
+| broker_2 (USD) | +45,18 $ (54 trades) | **-945,74 $** (89 trades) |
+| Winrate combinado | ~52% (sesgado por huecos) | **46,9%** |
+
+La imagen de rentabilidad que daba el histórico sin depurar era bastante más optimista que la
+real, sobre todo por los trades perdedores nunca registrados. Junio y julio 2026 son, con
+diferencia, los peores meses del año (~-1.470€/$ combinados) — antes casi invisibles en el
+histórico.
+
+**Lección para el workflow "cierre del día"**: los netos marcados como *ESTIMADO* (ver sección
+de arriba) deben tratarse con más recelo — la acumulación de pequeños redondeos y comisiones
+mal contadas en estimaciones manuales es lo que produjo este desfase de ~1.600€/$ a lo largo
+del año. Cuando se pueda, confirmar contra el extracto real (`tradeHistory_*.csv` en Colmex,
+`Transactions.csv` en DeGiro) en vez de dejar la estimación sin revisar. Sería razonable
+repetir esta reconciliación completa cada 1-2 meses en vez de esperar a que se acumule tanto.
