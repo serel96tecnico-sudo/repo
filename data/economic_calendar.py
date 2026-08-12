@@ -8,7 +8,7 @@ que se cachea en disco — de sobra para las dos corridas diarias del pipeline.
 """
 import json
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import requests
@@ -78,12 +78,17 @@ def _normalize(ev: dict) -> dict:
 
 
 def get_high_impact_events(target: date = None, countries: list = None,
-                            min_impact: str = None) -> list:
-    """Eventos del feed en `target` (hoy por defecto), filtrados por país e
-    impacto mínimo. Formato normalizado: title/country/date/impact/forecast/previous."""
+                            min_impact: str = None, now: datetime = None) -> list:
+    """Eventos del feed en `target` (hoy por defecto) que TODAVÍA NO SE HAN
+    PUBLICADO, filtrados por país e impacto mínimo. Un evento de `target` cuya
+    hora ya pasó (p.ej. el CPI de las 8:30am ET una vez publicado el dato) se
+    excluye: la incertidumbre binaria que motiva R9 (utils/risk_policy.py) deja
+    de existir en cuanto el dato es conocido, aunque siga siendo "hoy". Formato
+    normalizado: title/country/date/impact/forecast/previous."""
     target = target or date.today()
     countries = countries if countries is not None else MACRO_EVENT_COUNTRIES
     min_rank = _IMPACT_RANK.get(min_impact or MACRO_EVENT_MIN_IMPACT, 2)
+    now = now or datetime.now(timezone.utc)
 
     out = []
     for ev in fetch_calendar_events():
@@ -93,10 +98,12 @@ def get_high_impact_events(target: date = None, countries: list = None,
             continue
         raw_date = ev.get("date", "")
         try:
-            ev_date = datetime.fromisoformat(raw_date.replace("Z", "+00:00")).date()
+            ev_dt = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
         except ValueError:
             continue
-        if ev_date != target:
+        if ev_dt.date() != target:
             continue
+        if ev_dt <= now:
+            continue  # ya se publicó — deja de ser riesgo pendiente para R9
         out.append(_normalize(ev))
     return out

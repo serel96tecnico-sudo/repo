@@ -13,7 +13,8 @@ esa clasificación se aplican:
   R6  open_position_risk()   — riesgo abierto agregado de la cartera (tope en el
                                orchestrator). Freno al clúster correlacionado.
   R9  macro_event_guard()    — evento macro de alto impacto (calendario económico)
-                               el mismo día: no se abren nuevas posiciones.
+                               el mismo día, aún PENDIENTE de publicarse: no se
+                               abren nuevas posiciones.
 
 La taxonomía es una SEMILLA editable por el operador. Los nombres no listados se
 clasifican por capitalización (fallback): >=100B → A, >=15B → B, resto → C/otros.
@@ -284,10 +285,14 @@ def short_bullish_catalyst_guard(sentiment_score_normalized: float, catalyst_fou
 
 
 def macro_event_guard(events_today: list) -> bool:
-    """R9 — no abrir posiciones NUEVAS el día de un evento macro de alto impacto
-    (FOMC, CPI, NFP...). El evento puede resolverse como catalizador o como cisne
-    negro en cualquier dirección; ante esa incertidumbre binaria, el día se trata
-    como no accionable para entradas nuevas. No afecta a la cartera existente.
+    """R9 — no abrir posiciones NUEVAS mientras quede PENDIENTE un evento macro de
+    alto impacto (FOMC, CPI, NFP...) hoy. `events_today` ya viene filtrado por
+    get_high_impact_events() a solo eventos cuya hora todavía no ha llegado — un
+    evento del mismo día ya publicado no cuenta, porque la incertidumbre binaria
+    que motiva la guarda se resuelve en cuanto el dato es conocido. Mientras el
+    evento sigue pendiente puede resolverse como catalizador o como cisne negro en
+    cualquier dirección; ante esa incertidumbre binaria, se trata como no
+    accionable para entradas nuevas. No afecta a la cartera existente.
 
     True → degradar a WATCH (longs y cortos por igual, a diferencia de R4/R8 que
     solo tocan cortos)."""

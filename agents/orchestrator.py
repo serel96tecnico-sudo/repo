@@ -502,11 +502,14 @@ class TradingOrchestrator:
     def _apply_macro_event_guard(self, final) -> list:
         """R9 — Guarda de evento macro de alto impacto (calendario económico).
 
-        Un evento de alto impacto hoy (FOMC, CPI, NFP...) puede resolverse como
-        catalizador o como cisne negro en cualquier dirección; ante esa incertidumbre
-        no se abren posiciones NUEVAS ese día — se degradan a WATCH tanto longs como
-        cortos. No toca la cartera existente. Si el feed del calendario falla, no
-        bloquea el pipeline (fail-open): se registra el error y se sigue sin guarda.
+        Un evento de alto impacto hoy (FOMC, CPI, NFP...) que TODAVÍA NO SE HA
+        PUBLICADO puede resolverse como catalizador o como cisne negro en cualquier
+        dirección; ante esa incertidumbre no se abren posiciones NUEVAS mientras
+        siga pendiente — se degradan a WATCH tanto longs como cortos. Un evento del
+        mismo día ya publicado (get_high_impact_events() filtra por hora, no solo
+        por fecha) deja de contar: la incertidumbre binaria ya se resolvió. No toca
+        la cartera existente. Si el feed del calendario falla, no bloquea el
+        pipeline (fail-open): se registra el error y se sigue sin guarda.
         """
         if not final:
             return final

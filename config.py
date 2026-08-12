@@ -181,12 +181,15 @@ RECENT_LOSS_MIN_ABS = 10.0   # pérdida neta mín. (€/$ abs.) para contar como
 # orchestrator._merge_and_rank (utils.risk_policy.short_bullish_catalyst_guard).
 SHORT_BULLISH_CATALYST_MIN = 7.5
 
-# R9 (nueva 2026-08-04) — Guarda de evento macro de alto impacto (calendario económico).
-# Fuente: feed público de Forex Factory (nfs.faireconomy.media/ff_calendar_thisweek.json),
-# sin API key — ver data/economic_calendar.py. Un evento de alto impacto (FOMC, CPI, NFP...)
-# el mismo día puede ser catalizador o cisne negro en cualquier dirección: ante la
-# incertidumbre no se abren NUEVAS posiciones ese día (se degradan a WATCH); no toca la
-# cartera existente. Aplicado en orchestrator._apply_macro_event_guard
+# R9 (nueva 2026-08-04; sensible a la hora del evento desde 2026-08-12) — Guarda de
+# evento macro de alto impacto (calendario económico). Fuente: feed público de Forex
+# Factory (nfs.faireconomy.media/ff_calendar_thisweek.json), sin API key — ver
+# data/economic_calendar.py. Un evento de alto impacto (FOMC, CPI, NFP...) el mismo
+# día Y AÚN PENDIENTE de publicarse puede ser catalizador o cisne negro en cualquier
+# dirección: ante la incertidumbre no se abren NUEVAS posiciones mientras siga
+# pendiente (se degradan a WATCH); un evento del mismo día ya publicado no cuenta
+# (get_high_impact_events() filtra por hora, no solo por fecha). No toca la cartera
+# existente. Aplicado en orchestrator._apply_macro_event_guard
 # (utils.risk_policy.macro_event_guard).
 ECONOMIC_CALENDAR_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 ECONOMIC_CALENDAR_CACHE_TTL_HOURS = 6   # FF limita a 2 descargas/5min del fichero semanal

@@ -1,6 +1,6 @@
 """Tests del calendario económico (R9, docs/estrategia_riesgo.md §3)."""
 
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 import data.economic_calendar as ec
 from utils.risk_policy import macro_event_guard
@@ -15,6 +15,10 @@ RAW_EVENTS = [
     {"title": "Building Permits", "country": "USD", "date": "2026-08-05T08:30:00-04:00",
      "impact": "High", "forecast": "", "previous": ""},
 ]
+
+# "now" fijado antes de todos los eventos de RAW_EVENTS, para que los tests que no
+# ejercitan explícitamente el filtro de hora sigan viendo los eventos como pendientes.
+BEFORE_ALL_EVENTS = datetime(2026, 8, 4, 0, 0, 0, tzinfo=timezone.utc)
 
 
 class _FakeResp:
@@ -83,7 +87,7 @@ def test_fetch_returns_empty_without_cache_on_error(monkeypatch, tmp_path):
 def test_filters_by_date_country_and_impact(monkeypatch, tmp_path):
     _patch_fetch(monkeypatch, tmp_path)
 
-    events = ec.get_high_impact_events(target=date(2026, 8, 4))
+    events = ec.get_high_impact_events(target=date(2026, 8, 4), now=BEFORE_ALL_EVENTS)
     titles = {e["title"] for e in events}
     # Solo USD + High + 2026-08-04: FOMC sí, Fed Chair (Medium) no,
     # German Factory Orders (EUR) no, Building Permits (05/08) no.
@@ -92,7 +96,7 @@ def test_filters_by_date_country_and_impact(monkeypatch, tmp_path):
 
 def test_no_events_on_quiet_day(monkeypatch, tmp_path):
     _patch_fetch(monkeypatch, tmp_path)
-    assert ec.get_high_impact_events(target=date(2026, 8, 6)) == []
+    assert ec.get_high_impact_events(target=date(2026, 8, 6), now=BEFORE_ALL_EVENTS) == []
 
 
 def test_custom_countries_and_min_impact(monkeypatch, tmp_path):
@@ -100,8 +104,32 @@ def test_custom_countries_and_min_impact(monkeypatch, tmp_path):
 
     events = ec.get_high_impact_events(
         target=date(2026, 8, 4), countries=["EUR"], min_impact="High",
+        now=BEFORE_ALL_EVENTS,
     )
     assert {e["title"] for e in events} == {"German Factory Orders"}
+
+
+# ── get_high_impact_events: filtro por hora (evento ya publicado) ────────────
+
+_ET_OFFSET = timezone(-timedelta(hours=4))  # coincide con el offset del feed en RAW_EVENTS
+
+
+def test_excludes_event_already_published_today(monkeypatch, tmp_path):
+    _patch_fetch(monkeypatch, tmp_path)
+
+    # FOMC Statement es a las 18:00-04:00; comprobamos 1 minuto después.
+    after_event = datetime(2026, 8, 4, 18, 1, 0, tzinfo=_ET_OFFSET)
+    events = ec.get_high_impact_events(target=date(2026, 8, 4), now=after_event)
+    assert events == []
+
+
+def test_still_includes_event_not_yet_published_today(monkeypatch, tmp_path):
+    _patch_fetch(monkeypatch, tmp_path)
+
+    # 1 minuto antes de las 18:00-04:00 del FOMC Statement: sigue pendiente.
+    before_event = datetime(2026, 8, 4, 17, 59, 0, tzinfo=_ET_OFFSET)
+    events = ec.get_high_impact_events(target=date(2026, 8, 4), now=before_event)
+    assert {e["title"] for e in events} == {"FOMC Statement"}
 
 
 # ── macro_event_guard (R9) ────────────────────────────────────────────────────
