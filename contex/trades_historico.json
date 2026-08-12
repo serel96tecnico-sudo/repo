@@ -3,6 +3,51 @@
   "created": "2026-06-11",
   "trades": [
     {
+      "ticker": "TSLA",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 4,
+      "net_pl_eur": -15.07,
+      "fecha_cierre": "2026-08-12",
+      "nota": "Round-trip intradia (12/08): compra 4 @$326.90 (16:02:14, orden tipo 'Take Profit' usada como entrada), venta 4 @$325.35 por Stop Loss (16:31:09, 29 min despues). Gross -$6.20. Net EUR ESTIMADO -15.07 con TC ~1.15 sin confirmar (2 comisiones -EUR2.00 c/u + autoFX ambas patas ~EUR2.84 c/u) -- pendiente confirmar contra extracto DeGiro."
+    },
+    {
+      "ticker": "PSX",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 3,
+      "net_pl_eur": 37.32,
+      "fecha_cierre": "2026-08-11",
+      "nota": "CONFIRMADO por extracto DeGiro. Venta 3 @$220.15 (16:40): recibido EUR568.84 (TC 1.1541, autoFX -EUR1.43, comision -EUR2.00). Compra 3 @$203.18 (reentrada 06/08): pagado EUR531.52 (TC 1.154, autoFX -EUR1.32, comision -EUR2.00). Net = 568.84-531.52 = +EUR37.32 (gross +$50.91)."
+    },
+    {
+      "ticker": "ILF",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 22,
+      "net_pl_usd": -17.24,
+      "fecha_cierre": "2026-08-11",
+      "nota": "Venta manual 22 @$34.47 (15:49:31, Colmex, confirmado por historico de ordenes). BEP $35.14 (apertura 04/08 via alerta de pullback armada). Gross -$14.74, net -$17.24. Cierre manual del operador (no salto el stop $34.21) para liberar presupuesto del sub-tema Tier C 'otros' (R2) que bloqueaba la alerta de FTNT; la posicion llevaba 7-8 dias consecutivos en rojo sin traccion. El precio siguio cayendo tras el cierre hasta un minimo de $33.675 el mismo dia -- salida oportuna."
+    },
+    {
+      "ticker": "CRWD",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 4,
+      "net_pl_usd": 110.02,
+      "fecha_cierre": "2026-08-11",
+      "nota": "Venta 4 @$222.65 (16:30:22, Colmex, confirmado). BEP $194.52 (apertura 03/08). Gross +$112.52, net +$110.02. Ganadora, cerrada como parte de la rotacion de cartera del dia (junto con DXCM e ILF) para dar entrada a GLD."
+    },
+    {
+      "ticker": "DXCM",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 8,
+      "net_pl_usd": 55.9,
+      "fecha_cierre": "2026-08-11",
+      "nota": "Venta 8 @$89.11 (16:31:34, Colmex, confirmado). BEP $81.81. Gross +$58.40, net +$55.90. Ganadora, cerrada como parte de la rotacion de cartera del dia (junto con CRWD e ILF) para dar entrada a GLD."
+    },
+    {
       "ticker": "BTC",
       "broker": "broker_1",
       "direccion": "long",
