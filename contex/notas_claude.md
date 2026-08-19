@@ -48,6 +48,25 @@ sobrevive al ReportWriter (antes el texto sonaba a compra con veredicto WATCH).
 
 ---
 
+## ⚠️ REGLA CRITICA (corregida 2 veces, NO volver a romperla) — columna "Total G/P€" de broker_1 (DeGiro)
+
+La columna **"Total G/P€"** de la tabla de posiciones de DeGiro **NO es el resultado del trade/lote
+actualmente abierto**. Es el acumulado historico de TODOS los trades que se han hecho alguna vez con
+ese ticker en esa cuenta (incluye rondas ya cerradas hace meses, sumadas al lote actual). Ejemplo:
+NVDA muestra "Total G/P€" > €1.350 porque suma la ronda cerrada el 06/08 (+€69,38) mas todo el
+historico previo del ticker, no solo la posicion reabierta el 11/08.
+
+**La columna que SI representa el trade actual es "G/P Potencial €"** (`gp_potencial_eur` en
+`portfolio.json`) frente al BEP de esa entrada concreta.
+
+**Consecuencia practica**: al cerrar una posicion, el `net_pl_eur`/`net_pl_usd` que se escribe en
+`trades_historico.json` tiene que salir del extracto de transacciones real (compra vs venta
+confirmadas) o, si no hay extracto todavia, de "G/P Potencial €" -- **NUNCA** de "Total G/P€". Usar
+"Total G/P€" para eso falsearia el track record (arrastraria ganancias/perdidas de trades antiguos
+ya registrados, duplicandolos). Se puede seguir registrando "Total G/P€" en `portfolio.json` como
+dato informativo de fondo (asi esta ahora), pero etiquetado siempre como acumulado historico, nunca
+como el resultado del trade en curso.
+
 ## Workflow "cierre del día"
 
 Cuando el operador manda capturas de sus brokers y dice **"cierre del día"**, actualizar a mano dos ficheros en `contex/`:
@@ -165,8 +184,61 @@ TSM. broker_1 total B/P mejoró EUR-838.53→EUR-720.64 (+EUR117.89), con una re
 caja -EUR400 (04/08, no ligada a trading) que enmascara la mejora en `cuenta_completa`.
 broker_2 balance sin cambios en la semana ($2,476.46).
 
-**Pendiente recurrente:** GLDA sigue sin stop-loss configurado (4 días seguidos, 05/08→07/08) —
-seguir preguntando al operador hasta que se confirme o se ponga uno.
+**Pendiente recurrente (RESUELTO 2026-08-11, parcialmente):** GLDA llevaba sin stop-loss desde
+su apertura el 05/08. Calculado el 11/08 con GLD (SPDR Gold Shares) como proxy de volatilidad
+(GLDA no tiene datos en Alpaca ni Yahoo Finance) — ATR14 de GLD ≈1.86% del precio, 2.5×ATR
+(mismo `ATR_STOP_MULTIPLIER` de `config.py`) daría ≈€139.54 desde BEP o ≈€144.05 trailing desde
+precio. El operador eligió en su lugar un **stop a breakeven exacto (€146.35, el BEP)** —
+prioriza proteger el capital ya en verde (+3.22%) sobre dejar más margen al ruido normal del
+oro. Registrado en `portfolio.json` (`stop_loss: 146.35`). **Sigue pendiente**: la orden real
+de venta stop en DeGiro — el pipeline no tiene API de órdenes hacia broker_1, así que el
+operador debe introducirla manualmente. Verificar en el próximo cierre que ya esté colocada.
+
+## 2026-08-14 — Cierre del dia (viernes) y cierre semanal: FTNT posiblemente por debajo de su stop sin ejecutar
+
+Cierre 10/08-14/08. Semana positiva: broker_1 total B/P mejora +€37.53 (-€720.64→-€683.11) pese al
+dia rojo de hoy; broker_2 balance sube +$127.48 ($2,476.46→$2,603.94). Cerradas la semana: PSX
+(+€37.32), CRWD (+$110.02), DXCM (+$55.90), ILF (-$17.24), TSLA (-€15.07), AME (+€36.65). Sin
+trades cerrados hoy en ningun broker (portfolio.json actualizado solo con mark-to-market).
+
+**Pendiente urgente**: FTNT (broker_1) cotiza $159.955, por debajo del stop confirmado el 12/08
+($160.14), pero 0 transacciones hoy -- la venta no ha ejecutado. La captura de 'Ordenes pendientes'
+de hoy muestra la linea de FTNT truncada a '$159' (sin decimales, a diferencia de las demas lineas
+que si los muestran), asi que no se puede confirmar si el stop sigue en $160.14 o se ha modificado/
+cancelado. Verificar con el operador antes de la apertura del lunes. **Patron a recordar**: cuando
+el panel de ordenes pendientes de DeGiro trunque un precio sin decimales mientras las demas lineas
+si los muestran, tratarlo como señal de posible orden distinta a la registrada, no solo un problema
+de formato -- contrastar contra el stop conocido en vez de asumir que coincide.
+
+**Nota positiva**: SLNH (broker_2) recupero su stop ($0.92) y TP ($2.90) tras el earnings del 13/08
+AMC -- confirmado visualmente y por el conteo de 'Ordenes 6' en Colmex. Cierra el pendiente abierto
+desde el 12/08 (stop quitado deliberadamente de cara al evento).
+
+---
+
+## 2026-08-18 — Cierre del día (martes): 4 cierres
+
+broker_1 rotó 3 posiciones USD antiguas (TSM, NVDA, SBET, todas vendidas 15:35-15:37) para abrir CVX
+(Chevron, 4@$204.93, stop $196.30). broker_2 cerró SLNH (desapareció de la tabla de Posiciones).
+
+- **SBET** (broker_1): inicialmente ESTIMADO +€146.96 (posición antigua sin coste de entrada en EUR
+  confirmado); el operador aportó el extracto de transacciones DeGiro después → **CONFIRMADO
+  +€141.72** (venta €651.35 TC 1.1579, compra €509.63 TC 1.1399). Corregido en `portfolio.json` y
+  `trades_historico.json`.
+- **SLNH** (broker_2): inicialmente ESTIMADO +$24.87 (vía delta de balance, sin histórico de órdenes);
+  el operador aportó la captura del histórico de órdenes de Colmex después → **CONFIRMADO** ejecución
+  200@$1.30, 15:38:33, net ~+$23.50 (fee -$2.50 asumido por patrón habitual, no desglosado en el
+  histórico). Corregido en ambos ficheros.
+- **TSM** (broker_1): el operador aportó también el extracto detallado (con TC/autoFX/comisiones) de
+  las 4 transacciones de hoy → **CONFIRMADO -€2.21** (venta €717.84 TC 1.1581, compra €720.05).
+- **NVDA** (broker_1): el operador aportó también el extracto de la compra del 11/08 (reentrada) →
+  **CONFIRMADO -€3.91** (venta €568.93 TC 1.1581, compra €572.84 TC 1.1544). Los 4 trades del cierre
+  del 18/08 quedan así completamente confirmados por extracto, sin estimaciones pendientes.
+
+**Patrón a recordar**: cuando falte el desglose de una venta/cierre en la captura inicial, marcar
+ESTIMADO y seguir adelante — si el operador aporta después el extracto real (transacciones DeGiro,
+histórico de órdenes Colmex), sustituir el número y dejar constancia de la corrección, no solo del
+valor final.
 
 ## Registro de decisiones / gotchas
 
@@ -259,3 +331,54 @@ mal contadas en estimaciones manuales es lo que produjo este desfase de ~1.600�
 del año. Cuando se pueda, confirmar contra el extracto real (`tradeHistory_*.csv` en Colmex,
 `Transactions.csv` en DeGiro) en vez de dejar la estimación sin revisar. Sería razonable
 repetir esta reconciliación completa cada 1-2 meses en vez de esperar a que se acumule tanto.
+
+## 2026-08-12 — Caso FROG: "contradicción" pipeline vs indicadores TradingView es desajuste de timeframe
+
+El operador notó que los indicadores de su chart de TradingView (FROG, NASDAQ, 1h: **SSL
+Channel** de MissTricky con canal SMA-high/low 200, y **NSDT HAMA Candles** con velas
+sintéticas EMA20-25 + gradiente de fuerza) parecían "contradecir" el report del pipeline del
+2026-08-11 evening (FROG WATCH score 7.6, LARGO, bloqueado por cap R1 de alta beta, EMA9/21/50
+diarios en stack alcista, pide pullback a ~$85.29 con volumen y vela de confirmación).
+
+**No es contradicción de tesis, es desajuste de timeframe/exigencia**: el pipeline lee
+**diario** (medias lentas, aún no reflejan el rollover intradía tras el gap de earnings del
+06/08); los indicadores del chart leen **1h**, mucho más reactivos, y ya mostraban el HAMA
+rompiendo su ribbon (87.68-88.20) con racha bajista acelerándose, mientras el SSL(200,1h)
+todavía no daba señal de venta (a solo ~$1.90 de darla). El pipeline ya pedía exactamente ese
+pullback como condición de entrada — el desacuerdo real está en el **carácter** del movimiento:
+el pipeline exige una pausa ordenada con vela alcista de confirmación y volumen, y lo que se
+veía en el intradía lucía más a ruptura sin rebote que a pausa. FROG es candidato en
+`portfolio.json` desde el 04/08 (no posición abierta), condición pendiente:
+"Pullback a EMA9/EMA21 con vela alcista de confirmación".
+
+**Patrón a recordar**: cuando el operador compare una lectura del report (diario) con su chart
+de TradingView en timeframe intradía, comprobar primero si son literalmente el mismo horizonte
+antes de asumir que hay contradicción — casi siempre el intradía se adelanta al diario, no lo
+contradice, salvo que el nivel diario clave (aquí EMA9 ~85.29) llegue a romperse también.
+
+## 2026-08-19 — FROG cerrada por stop en el wick de apertura; R9 (FOMC) confirma que aún nadie estaba activable
+
+Report de la mañana (15:50 CEST) con los 4 candidatos en WATCH, ninguno accionable: OSCR/AEHR
+bloqueados por R9 (Actas del FOMC de hoy), MSFT/FTNT por debajo del umbral de score. El operador
+preguntó por la volatilidad del día y se revisaron los 4 setups en vivo vía TradingView MCP
+(`chart_set_symbol` + `quote_get` + `data_get_ohlcv`): ninguno había recuperado el nivel de fuerza
+que exige R5 para activarse — OSCR se acercaba ligeramente, AEHR y FTNT se alejaban más (AEHR con
+una caída fuerte de -16.5% en 3 sesiones, incluyendo la de hoy), MSFT plano. **Aclaración de
+timing**: las Actas del FOMC se publican normalmente ~14:00 ET / 20:00 CEST; a media mañana (hora
+de la revisión) todavía no habían salido — la volatilidad vista hasta ese momento era apertura de
+sesión normal + dinámica propia de AEHR, no el evento en sí.
+
+Al revisar también las posiciones abiertas (no las del report, pero relevantes por la volatilidad),
+**FROG (broker_2) hizo un wick hasta $87.39 en velas de 15min hacia las 14:00 UTC** (justo la
+apertura), por debajo de su stop trailing ($89.31, puesto el 17/08 por encima del BEP $87.67), y se
+recuperó a ~$89.7 minutos después. El operador confirmó por captura del histórico de órdenes Colmex
+que el stop **sí ejecutó**: 9 acciones vendidas a $89.09 medio, 15:37:06, net +$10.30 (gross
++$12.80). Registrado en `portfolio.json` (quitada de `acciones`, añadida a `cerradas_semana`) y en
+`trades_historico.json`. **Pendiente**: `balance_usd`/`open_net_pl_usd`/margin de broker_2 en
+`portfolio.json` siguen siendo los del 18/08 — refrescar con captura nueva de Colmex en el próximo
+cierre del día.
+
+**Patrón a recordar**: un wick intradía que perfora un stop y se recupera en minutos NO significa
+que el stop no saltara — si es una orden stop real en el broker (no solo mental), casi seguro
+ejecutó en el toque aunque el precio ya esté de vuelta por encima al mirar el chart. Verificar
+siempre contra el histórico de órdenes del broker, no contra el precio "actual".

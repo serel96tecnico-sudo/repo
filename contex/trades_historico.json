@@ -3,6 +3,64 @@
   "created": "2026-06-11",
   "trades": [
     {
+      "ticker": "FROG",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 9,
+      "entrada_usd": 87.67,
+      "cierre_usd": 89.09,
+      "gross_pl_usd": 12.8,
+      "net_pl_usd": 10.3,
+      "fecha_cierre": "2026-08-19",
+      "hora_cierre": "15:37:06",
+      "nota": "Stop Loss ejecutado (orden trailada el 17/08 a $89.31, por encima del BEP $87.67, tras la senal STRONG BUY score 7.8 de la tarde del 12/08). CONFIRMADO por historico de ordenes Colmex: Vender Stop Loss, 9 ejecutadas, precio medio $89.09, Estado Ejecutadas, ult. actualizacion 2026-08-19 15:37:06. Gross P/L +$12.80, Net P/L +$10.30. Wick intradia hasta $87.39 hacia las 14:00 UTC (apertura de sesion, antes de la publicacion de las actas del FOMC) disparo el stop; el precio se recupero a ~$89.7 pocos minutos despues. Trade cerrado en ganancia gracias al trailing por encima de BEP."
+    },
+    {
+      "ticker": "TSM",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 2,
+      "net_pl_eur": -2.21,
+      "fecha_cierre": "2026-08-18",
+      "nota": "CONFIRMADO por extracto de transacciones DeGiro, ambas patas. VENTA 2@$417.865 (15:37): valor EUR721.64 (TC 1.1581), autoFX -EUR1.80, comisiones -EUR2.00 -> total EUR717.84. COMPRA 2@$413.28 (06/08): coste EUR720.05. NET REALIZADO = 717.84-720.05 = -EUR2.21 (gross +$9.17, practicamente breakeven). Sustituye la estimacion inicial de -EUR1.54."
+    },
+    {
+      "ticker": "NVDA",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 3,
+      "net_pl_eur": -3.91,
+      "fecha_cierre": "2026-08-18",
+      "nota": "CONFIRMADO por extracto de transacciones DeGiro, ambas patas. VENTA 3@$220.9506 (15:36): valor EUR572.36 (TC 1.1581), autoFX -EUR1.43, comisiones -EUR2.00 -> total EUR568.93. COMPRA 3@$219.11 (reentrada 11/08): valor -EUR569.42 (TC 1.1544), autoFX -EUR1.42, comisiones -EUR2.00 -> coste EUR572.84. NET REALIZADO = 568.93-572.84 = -EUR3.91 (gross +$5.52). Sustituye la estimacion inicial de -EUR4.10."
+    },
+    {
+      "ticker": "SBET",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 120,
+      "net_pl_eur": 141.72,
+      "fecha_cierre": "2026-08-18",
+      "nota": "CONFIRMADO por extracto de transacciones DeGiro, ambas patas. VENTA 120@$6.32 (15:35): valor EUR654.98 (TC 1.1579), autoFX -EUR1.64, comisiones -EUR2.00 -> total EUR651.35. COMPRA 120@$4.8098: valor -EUR506.36 (TC 1.1399), autoFX -EUR1.27, comisiones -EUR2.00 -> total -EUR509.63. NET REALIZADO = 651.35-509.63 = +EUR141.72 (gross +$181.22). Sustituye la estimacion inicial de +EUR146.96."
+    },
+    {
+      "ticker": "SLNH",
+      "broker": "broker_2",
+      "direccion": "long",
+      "cantidad": 200,
+      "net_pl_usd": 23.5,
+      "fecha_cierre": "2026-08-18",
+      "nota": "CONFIRMADO por historico de ordenes Colmex: Vender Mercado 200 @$1.30 (precio medio de ejecucion), Ejecutadas, 2026-08-18 15:38:33. BEP $1.17. Gross +$26.00. Net ESTIMADO +$23.50 asumiendo fee -$2.50 (consistente con el patron de Colmex; el fee exacto no viene desglosado en el historico de ordenes). Sustituye la estimacion inicial de +$24.87 (via delta de balance)."
+    },
+    {
+      "ticker": "FTNT",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 4,
+      "net_pl_eur": -25.58,
+      "fecha_cierre": "2026-08-17",
+      "nota": "Stop loss saltado (confirmado $160.14 el 12/08), ejecuto con slippage a $158.915. CONFIRMADO por extracto DeGiro: venta 4@$158.915 (SOHO) -> EUR544.80 recibido (TC 1.1596, autoFX -EUR1.37, comision -EUR2.00); compra 4@$163.71 (JNST, 12/08) -> EUR570.38 pagado (TC 1.155, autoFX -EUR1.42, comision -EUR2.00). Net = 544.80-570.38 = -EUR25.58 (gross -$19.18)."
+    },
+    {
       "ticker": "TSLA",
       "broker": "broker_1",
       "direccion": "long",
@@ -2049,6 +2107,21 @@
       "fecha_cierre": "2026-08-06",
       "hora_cierre": "16:12",
       "nota": "06/08 CONFIRMADO por extracto de transacciones DeGiro, ambas patas. COMPRA 10 @$61.53 (XNYS): valor local -$615.30, valor -EUR538.09 (TC 1.1435), autoFX -EUR1.35, comision -EUR2.00 -> pagado EUR541.43. VENTA 10 @$63.455 (MSRP): valor local $634.55, valor EUR550.16 (TC 1.1534), autoFX -EUR1.38, comision -EUR2.00 -> recibido EUR546.78. NET REALIZADO = 546.78-541.43 = +EUR5.35 (gross vs BEP +$19.25). Venta muy por encima del stop $59.00 -- cierre manual de beneficios, no stop saltado."
+    },
+    {
+      "ticker": "AME",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 3,
+      "entrada_usd": 237.01,
+      "cierre_usd": 256.39,
+      "gross_pl_usd": 58.14,
+      "net_pl_eur": 36.65,
+      "fecha_cierre": "2026-08-13",
+      "hora_cierre": "15:53",
+      "nota": "13/08 CIERRE. CONFIRMADO por extracto de transacciones DeGiro, ambas patas. VENTA 3 @$256.39 (MSRP, 15:53): valor local $769.17, valor EUR666.99 (TC 1.1532), autoFX -EUR1.67, comision -EUR2.00 -> recibido EUR663.32. COMPRA 3 @$237.01 (BATS): valor local -$711.03, valor -EUR623.11 (TC 1.1411), autoFX -EUR1.56, comision -EUR2.00 -> pagado EUR626.67. NET REALIZADO = 663.32-626.67 = +EUR36.65 (gross vs BEP +$58.14). Cierre por decision manual del operador (no fue el stop $229.01, que quedaba lejos).",
+      "proceeds_eur": 663.32,
+      "cost_eur": 626.67
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "description": "DeGiro favourites list",
-  "updated": "2026-08-06",
+  "updated": "2026-08-19",
   "entries": [
     {
       "ticker": "AAPL",
@@ -583,73 +583,73 @@
       "source": "manual"
     },
     {
-      "ticker": "VELO",
-      "added": "2026-07-29",
+      "ticker": "REZI",
+      "added": "2026-08-17",
       "source": "long_screener"
     },
     {
-      "ticker": "ABTC",
-      "added": "2026-07-30",
+      "ticker": "CXT",
+      "added": "2026-08-17",
       "source": "long_screener"
     },
     {
-      "ticker": "FBRT",
-      "added": "2026-07-30",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "ASST",
-      "added": "2026-07-30",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "FOSL",
-      "added": "2026-07-30",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "SONO",
-      "added": "2026-07-31",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "AVR",
-      "added": "2026-08-03",
-      "source": "long_screener"
-    },
-    {
-      "ticker": "NXTC",
-      "added": "2026-08-04",
+      "ticker": "ARTV",
+      "added": "2026-08-17",
       "source": "long_screener"
     },
     {
       "ticker": "WGS",
-      "added": "2026-08-04",
+      "added": "2026-08-17",
       "source": "long_screener"
     },
     {
-      "ticker": "HLNE",
-      "added": "2026-08-05",
+      "ticker": "ANNX",
+      "added": "2026-08-18",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "BKKT",
+      "added": "2026-08-18",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "TNXP",
+      "added": "2026-08-18",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "PAR",
+      "added": "2026-08-18",
       "source": "long_screener"
     },
     {
       "ticker": "SPGI",
-      "added": "2026-08-05",
+      "added": "2026-08-18",
       "source": "long_screener"
     },
     {
-      "ticker": "CRH",
-      "added": "2026-08-05",
+      "ticker": "HLNE",
+      "added": "2026-08-18",
       "source": "long_screener"
     },
     {
-      "ticker": "TPC",
-      "added": "2026-08-06",
+      "ticker": "NXTC",
+      "added": "2026-08-19",
       "source": "long_screener"
     },
     {
-      "ticker": "UUUU",
-      "added": "2026-08-06",
+      "ticker": "FOSL",
+      "added": "2026-08-19",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "ELAN",
+      "added": "2026-08-19",
+      "source": "long_screener"
+    },
+    {
+      "ticker": "FBRT",
+      "added": "2026-08-19",
       "source": "long_screener"
     }
   ],
@@ -770,19 +770,19 @@
     "VRNS",
     "WULF",
     "XPEV",
-    "VELO",
-    "ABTC",
-    "FBRT",
-    "ASST",
-    "FOSL",
-    "SONO",
-    "AVR",
-    "NXTC",
+    "REZI",
+    "CXT",
+    "ARTV",
     "WGS",
-    "HLNE",
+    "ANNX",
+    "BKKT",
+    "TNXP",
+    "PAR",
     "SPGI",
-    "CRH",
-    "TPC",
-    "UUUU"
+    "HLNE",
+    "NXTC",
+    "FOSL",
+    "ELAN",
+    "FBRT"
   ]
 }
