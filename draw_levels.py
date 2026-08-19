@@ -15,6 +15,14 @@ se resuelve solo a su exchange primario — por eso NO hace falta mapear exchang
 
 Es NO-FATAL por diseño: si TradingView no está abierto o el CLI falla, avisa y
 sale sin romper nada (la señal por Telegram no depende de esto).
+
+Persistencia (2026-08-13): los niveles dibujados NUNCA se borran — quedan en el
+gráfico como referencia histórica de trades pasados. Solo se evita redibujar el
+mismo nivel dos veces: el state guarda, por ticker, los valores (entrada/stop/
+targets) ya dibujados, y si el pick de hoy trae exactamente los mismos valores
+que la última vez se salta el redibujado. Si algún valor cambia (nuevo setup
+para el mismo ticker), se dibuja encima SIN borrar lo anterior, así ambos
+quedan visibles.
 """
 import json
 import os
@@ -127,16 +135,23 @@ def find_latest_report():
 
 
 def load_state():
+    """Devuelve {ticker: {"entry":..,"stop":..,"t1":..,"t2":..}} de la última vez
+    que se dibujó cada ticker. Soporta también el formato antiguo (lista de
+    símbolos) de antes de la persistencia, tratándolo como "sin niveles previos"
+    para no perder el fichero al migrar."""
     try:
-        return json.loads(STATE_FILE.read_text(encoding="utf-8")).get("symbols", [])
+        raw = json.loads(STATE_FILE.read_text(encoding="utf-8")).get("symbols", [])
     except Exception:
-        return []
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    return {}  # formato antiguo (lista) -> sin historial de niveles, se redibuja
 
 
-def save_state(symbols):
+def save_state(levels_by_ticker):
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     tmp = STATE_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"symbols": symbols, "updated": time.strftime("%Y-%m-%d %H:%M:%S")}, indent=2), encoding="utf-8")
+    tmp.write_text(json.dumps({"symbols": levels_by_ticker, "updated": time.strftime("%Y-%m-%d %H:%M:%S")}, indent=2), encoding="utf-8")
     os.replace(tmp, STATE_FILE)
 
 
@@ -197,17 +212,14 @@ def main(report_arg=None):
     original_symbol = state.get("symbol")
 
     previous = load_state()
-    current_tickers = [c["ticker"] for c in picks]
 
-    # 1) Limpia marcas de símbolos que ya NO están en la lista de hoy.
-    for sym in previous:
-        if sym not in current_tickers:
-            tv("symbol", sym)
-            tv("draw", "clear")
-
-    # 2) Dibuja los de hoy (limpiando antes cada uno para no acumular).
-    drawn = []
+    # Dibuja los de hoy. NO se borra nada (ni de tickers que salen de la lista ni
+    # del propio ticker antes de redibujar): los niveles quedan en el gráfico como
+    # referencia histórica. Para no apilar el mismo nivel día tras día, si el
+    # ticker ya tenía dibujados exactamente estos mismos valores se salta.
+    drawn = dict(previous)
     skipped_invalid = []
+    skipped_unchanged = []
     for c in picks:
         ticker = c["ticker"]
         rd = c.get("risk_data") or {}
@@ -215,18 +227,21 @@ def main(report_arg=None):
         stop = rd.get("stop_loss")
         t1, t2 = rd.get("target_1"), rd.get("target_2")
         score = c.get("composite_score")
+        levels = {"entry": entry, "stop": stop, "t1": t1, "t2": t2}
+
+        if previous.get(ticker) == levels:
+            skipped_unchanged.append(ticker)
+            continue
 
         set_res = tv("symbol", ticker)
         if not set_res.get("success"):
             print(f"  x {ticker}: no se pudo fijar el símbolo, salto.")
             continue
-        tv("draw", "clear")
 
         # Guard de validez: no dibujar setups que el precio ya invalidó. Son BUY
         # (longs), así que si el último precio ya está en/por debajo del stop, el
         # setup está muerto (caso OPEN 2026-07-10: recomendado a 5.41, stop 5.17,
-        # cotizando 5.04 al día siguiente). Dibujarlo engaña: parece vivo. Como el
-        # 'draw clear' de arriba ya corrió, el símbolo queda limpio y saltamos.
+        # cotizando 5.04 al día siguiente). Dibujarlo engaña: parece vivo.
         # fail-open: si no hay precio (quote falla), dibuja igualmente.
         px = current_price(ticker)
         if px is not None and stop is not None and px <= float(stop):
@@ -243,7 +258,7 @@ def main(report_arg=None):
         if DRAW_TARGETS and t2 is not None:
             draw_line(t2, STYLE_TARGET, f"T2 {t2}")
 
-        drawn.append(ticker)
+        drawn[ticker] = levels
         print(f"  ✔ {ticker}: entrada {entry} · stop {stop}"
               + (f" · T1 {t1} · T2 {t2}" if DRAW_TARGETS else ""))
 
@@ -253,9 +268,11 @@ def main(report_arg=None):
     if original_symbol:
         tv("symbol", original_symbol)
 
-    print(f"Hecho. Marcadas {len(drawn)} acciones en TradingView."
+    print(f"Hecho. {len(drawn)} tickers con niveles dibujados en TradingView (histórico acumulado)."
           + (f" Saltadas por invalidación (precio<=stop): {', '.join(skipped_invalid)}."
-             if skipped_invalid else ""))
+             if skipped_invalid else "")
+          + (f" Sin cambios (ya dibujadas): {', '.join(skipped_unchanged)}."
+             if skipped_unchanged else ""))
     return 0
 
 
