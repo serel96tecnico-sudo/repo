@@ -382,3 +382,64 @@ cierre del día.
 que el stop no saltara — si es una orden stop real en el broker (no solo mental), casi seguro
 ejecutó en el toque aunque el precio ya esté de vuelta por encima al mirar el chart. Verificar
 siempre contra el histórico de órdenes del broker, no contra el precio "actual".
+
+## 2026-09-02 — Informe duplicado por Telegram: dos programadores corriendo a la vez
+
+El pipeline se lanzaba **dos veces** a las mismas horas (15:40 y 20:30), cada una mandando su
+propio informe a Telegram vía `orchestrator.py:191`. Causa: convivían dos mecanismos de
+programación independientes, ambos activos:
+1. Servicio de Windows NSSM `TradingAgent` ("Trading Agent (Saetabia)") corriendo
+   `main.py --schedule` → `scheduler.py` (usa `RUN_TIME`/`RUN_TIME_EVENING` de `config.py`).
+   Es el camino de producción real (así lo documentan los comentarios de `scheduler.py` y
+   `draw_levels.py`).
+2. Tareas de Task Scheduler `SwingTradingAgent`/`SwingTradingAgentEvening`, reinstaladas el
+   27/08 (ver entrada de esa fecha) con `--setup-scheduler` porque parecían faltar — sin saber
+   que el servicio NSSM ya cubría lo mismo. Desde el 27/08 hasta hoy corrieron en paralelo.
+
+**Fix aplicado**: borradas las tareas `SwingTradingAgent` y `SwingTradingAgentEvening` de Task
+Scheduler (`schtasks /delete /tn ... /f`). Se deja el servicio NSSM `TradingAgent` como único
+disparador. `SwingTradingAgentSupportScan` NO se toca — `scheduler.py` no dispara
+`--support-scan`, así que esa tarea es independiente y no duplica nada.
+
+**Si vuelve a faltar el informe** (como el 27/08): comprobar primero `Get-Service TradingAgent`
+(debe estar `Running`, arranque `Automatic`) antes que `Get-ScheduledTask` — el servicio NSSM es
+ahora el único camino. **No volver a ejecutar `python main.py --setup-scheduler`** salvo que se
+elimine también el servicio NSSM antes, o se volverá a duplicar.
+
+## 2026-09-02 — CRWD (broker_1) cerrada por stop con slippage + bug descubierto: `--close-trade` escribe en el fichero equivocado
+
+**CRWD stop saltado**: stop confirmado en $208.40 (01/09), ejecutado real -3@$204.43 (16:02) —
+$3.97/acción peor, ~$11.91 de slippage extra en las 3 acciones. Gross -$26.46, net EUR
+**ESTIMADO** -€24.81 (TC~1.16 + fees típicos ~€2, sin extracto DeGiro todavía — confirmar en el
+próximo cierre). Registrado en `portfolio.json` (`acciones` sin CRWD, `cerradas_semana[0]`) y
+`trades_historico.json` (append). broker_1 queda sin CRWD, resto de posiciones sin tocar.
+
+**Bug descubierto, no corregido todavía**: `python main.py --close-trade` (`PortfolioTracker` en
+`agents/portfolio_tracker.py` + `context_manager.py:update_trade_history`) escribe en
+**`contex/trade_history.json`** (singular) — un fichero huérfano que **NINGÚN** otro consumidor
+lee. El flujo real ("cierre del día", este mismo fichero de notas, y lo que está bajo control de
+versiones activo) usa **`contex/trades_historico.json`** (plural) vía edición manual o
+`scripts/registrar_cierre.py`/`utils/telegram_bot.py`. Probé `--close-trade` para este cierre,
+vi que no tocaba `trades_historico.json`, y **revertí** la entrada que dejó en
+`trade_history.json` para no tener el dato duplicado con esquemas distintos en dos sitios.
+`scripts/generate_performance_report.py` añade más confusión: su cabecera dice que
+`trades_historico.json` "quedó congelado el 2026-06-10" y que el log vivo es
+`portfolio.json['cerradas_semana']` — eso sí es cierto (confirmado: `R7 recent_loss_cooldown`
+en `utils/risk_policy.py` lee de ahí, no de ningún trade_history), pero la afirmación de que
+`trades_historico.json` está congelado es **falsa**: se ha seguido escribiendo a mano
+continuamente (última entrada antes de hoy: 31/08). Tres ficheros con función solapada
+(`trade_history.json`, `trades_historico.json`, `portfolio.json.cerradas_semana`), documentación
+desalineada.
+
+**RESUELTO el mismo día (2026-09-02)**: antes de borrar `trade_history.json` comparé sus 11
+trades (may-2026) contra `trades_historico.json` — 10 ya estaban duplicados (2 con datos algo
+distintos porque `trades_historico.json` los tiene vía backfill del extracto real de
+DeGiro/Colmex, más fiables); 1 (**ALRIB**, Riber SA, cerrada 12/05 -€38.00) no existía en
+ningún otro sitio y lo fusioné a mano antes de borrar el fichero huérfano. `agents/portfolio_tracker.py`
+recableado: `history_path` → `trades_historico.json`, `log_closed_trade()` y `_build_report()`
+reescritos para el esquema real (`entrada_*`/`cierre_*`/`fecha_cierre`/`nota`, sin `resultado`
+explícito — win/loss se infiere del signo del neto). Mismo fix en el código muerto
+`context_manager.py:update_trade_history()` (nadie lo llama, pero tenía el mismo bug de ruta +
+guardaba una lista plana en vez de `{"trades": [...]}`). Verificado: `--portfolio-report` ahora
+muestra el histórico completo (198 trades, ene-sep 2026) en vez de las 11 del fichero huérfano;
+159/159 tests siguen pasando. `--close-trade` ya es seguro de usar de nuevo.

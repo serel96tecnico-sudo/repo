@@ -66,14 +66,17 @@ class ContextManager:
         self._atomic_write_json(self.context_dir / "portfolio.json", portfolio)
 
     def update_trade_history(self, trade: dict) -> None:
-        path = self.context_dir / "trade_history.json"
-        history = []
+        """Añade un trade cerrado a contex/trades_historico.json (esquema real, ver
+        agents/portfolio_tracker.py). No llamado actualmente por nadie -- corregido
+        2026-09-02 junto con el mismo bug de ruta en portfolio_tracker.py."""
+        path = self.context_dir / "trades_historico.json"
+        history = {"trades": []}
         if path.exists():
             try:
                 history = json.loads(path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
-                history = []
-        history.append(trade)
+                history = {"trades": []}
+        history.setdefault("trades", []).append(trade)
         self._atomic_write_json(path, history)
 
     def save_ticker_universe(self, tickers: list, source: str) -> None:
