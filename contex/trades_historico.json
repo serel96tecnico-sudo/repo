@@ -2122,6 +2122,32 @@
       "nota": "13/08 CIERRE. CONFIRMADO por extracto de transacciones DeGiro, ambas patas. VENTA 3 @$256.39 (MSRP, 15:53): valor local $769.17, valor EUR666.99 (TC 1.1532), autoFX -EUR1.67, comision -EUR2.00 -> recibido EUR663.32. COMPRA 3 @$237.01 (BATS): valor local -$711.03, valor -EUR623.11 (TC 1.1411), autoFX -EUR1.56, comision -EUR2.00 -> pagado EUR626.67. NET REALIZADO = 663.32-626.67 = +EUR36.65 (gross vs BEP +$58.14). Cierre por decision manual del operador (no fue el stop $229.01, que quedaba lejos).",
       "proceeds_eur": 663.32,
       "cost_eur": 626.67
+    },
+    {
+      "ticker": "CRWD",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 3,
+      "entrada_usd": 213.25,
+      "cierre_usd": 204.43,
+      "gross_pl_usd": -26.46,
+      "net_pl_eur": -24.81,
+      "fecha_cierre": "2026-09-02",
+      "hora_cierre": "16:02",
+      "nota": "STOP SALTADO CON SLIPPAGE: stop colocado en $208.40 (confirmado 01/09), ejecutado real a $204.43 (-3, 16:02) -- $3.97/accion peor que el nivel del stop (~$11.91 extra de deslizamiento en las 3 acciones). BEP $213.25 (apertura 01/09 20:48, 3@$213.25). Gross -$26.46. Net EUR ESTIMADO (TC~1.16 + fees tipicos broker_1 ~EUR2, SIN extracto DeGiro todavia) -- confirmar y corregir en el proximo cierre cuando llegue el extracto."
+    },
+    {
+      "ticker": "ALRIB",
+      "broker": "broker_1",
+      "direccion": "long",
+      "cantidad": 40,
+      "entrada_eur": 13.12,
+      "cierre_eur": 12.22,
+      "fecha_entrada": "2026-04-22",
+      "fecha_cierre": "2026-05-12",
+      "gross_pl_eur": -36.0,
+      "net_pl_eur": -38.0,
+      "nota": "Recuperado de contex/trade_history.json (fichero huerfano, retirado 2026-09-02 -- ver notas_claude.md). Cierre manual 12/05 @EUR12.22 (-5.34% dia). Precio ya bajo SL EUR12.50. ADX 48.7 momentum bajista fuerte. Mercado europeo en caida global por IPC EEUU por encima estimaciones. Comision EUR2.00 asumida (sin extracto)."
     }
   ]
 }

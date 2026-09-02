@@ -16,7 +16,12 @@ LOGS_DIR = Path("output/logs")
 class PortfolioTracker:
     def __init__(self):
         self.logger = get_logger("PortfolioTracker", LOGS_DIR)
-        self.history_path = CONTEXT_DIR / "trade_history.json"
+        # contex/trades_historico.json es el histórico REAL (workflow manual "cierre del
+        # día", scripts/registrar_cierre.py, utils/telegram_bot.py, R7 vía
+        # portfolio.json['cerradas_semana']). Hasta 2026-09-02 esta clase escribía en
+        # contex/trade_history.json (singular) -- un fichero huérfano que ningún otro
+        # consumidor leía. Ver contex/notas_claude.md 2026-09-02 para el detalle del bug.
+        self.history_path = CONTEXT_DIR / "trades_historico.json"
         self.portfolio_path = CONTEXT_DIR / "portfolio.json"
 
     # ------------------------------------------------------------------ #
@@ -45,38 +50,32 @@ class PortfolioTracker:
         moneda: str = "USD",
         notas: str = "",
     ) -> dict:
-        """Registra una operación cerrada en trade_history.json."""
+        """Registra una operación cerrada en trades_historico.json (esquema real,
+        compartido con el workflow manual "cierre del día" — ver CLAUDE.md)."""
         history = self._load_history()
 
         gross = round((exit_price - entry_price) * cantidad if direccion == "long"
                       else (entry_price - exit_price) * cantidad, 2)
         commission = BROKER2_COMMISSION if broker == "broker_2" else 0.0
         net = round(gross - commission, 2)
+        sufijo = "eur" if moneda == "EUR" else "usd"
 
         trade = {
-            "id": str(uuid.uuid4())[:8],
-            "broker": broker,
             "ticker": ticker,
-            "nombre": nombre,
+            "broker": broker,
             "direccion": direccion,
             "cantidad": cantidad,
-            "entry_date": entry_date,
-            "entry_price_usd": entry_price if moneda == "USD" else None,
-            "entry_price_eur": entry_price if moneda == "EUR" else None,
-            "exit_date": exit_date,
-            "exit_price_usd": exit_price if moneda == "USD" else None,
-            "exit_price_eur": exit_price if moneda == "EUR" else None,
-            "moneda": moneda,
-            "gross_pnl_usd": gross if moneda == "USD" else None,
-            "gross_pnl_eur": gross if moneda == "EUR" else None,
-            "commission_usd": commission if moneda == "USD" else 0.0,
-            "net_pnl_usd": net if moneda == "USD" else None,
-            "net_pnl_eur": net if moneda == "EUR" else None,
-            "resultado": "win" if net > 0 else "loss",
-            "notas": notas,
+            f"entrada_{sufijo}": entry_price,
+            f"cierre_{sufijo}": exit_price,
+            f"gross_pl_{sufijo}": gross,
+            f"net_pl_{sufijo}": net,
+            "nota": notas or f"Cerrada vía --close-trade ({moneda}, comisión {commission:.2f}).",
         }
+        if entry_date:
+            trade["fecha_entrada"] = entry_date
+        trade["fecha_cierre"] = exit_date
 
-        history["trades"].append(trade)
+        history.setdefault("trades", []).append(trade)
         self._save_history(history)
         self.logger.info(f"Operación cerrada registrada: {ticker} net P&L {moneda} {net:+.2f}")
         return trade
@@ -170,13 +169,14 @@ class PortfolioTracker:
 
         monthly = defaultdict(lambda: {"trades": [], "net_usd": 0.0, "net_eur": 0.0, "wins": 0, "losses": 0})
         for t in trades:
-            month = (t.get("exit_date") or "")[:7]
+            month = (t.get("fecha_cierre") or "")[:7]
             if not month:
                 continue
             monthly[month]["trades"].append(t)
-            monthly[month]["net_usd"] += t.get("net_pnl_usd") or 0.0
-            monthly[month]["net_eur"] += t.get("net_pnl_eur") or 0.0
-            if t.get("resultado") == "win":
+            monthly[month]["net_usd"] += t.get("net_pl_usd") or 0.0
+            monthly[month]["net_eur"] += t.get("net_pl_eur") or 0.0
+            net = t.get("net_pl_usd") if t.get("net_pl_usd") is not None else t.get("net_pl_eur")
+            if (net or 0) > 0:
                 monthly[month]["wins"] += 1
             else:
                 monthly[month]["losses"] += 1
@@ -195,14 +195,15 @@ class PortfolioTracker:
 
         # ---- Historial reciente ----
         lines += ["", "ÚLTIMAS OPERACIONES CERRADAS", "-" * 40]
-        recent = sorted(trades, key=lambda t: t.get("exit_date", ""), reverse=True)[:10]
+        recent = sorted(trades, key=lambda t: t.get("fecha_cierre", ""), reverse=True)[:10]
         if recent:
             for t in recent:
-                sym = "€" if t.get("moneda") == "EUR" else "$"
-                net = t.get("net_pnl_usd") or t.get("net_pnl_eur") or 0.0
-                resultado = "[W]" if t.get("resultado") == "win" else "[L]"
+                net_eur = t.get("net_pl_eur")
+                net = net_eur if net_eur is not None else (t.get("net_pl_usd") or 0.0)
+                sym = "€" if net_eur is not None else "$"
+                resultado = "[W]" if (net or 0) > 0 else "[L]"
                 lines.append(
-                    f"  {resultado} {t.get('exit_date','?')} | {t.get('ticker','?'):<6} "
+                    f"  {resultado} {t.get('fecha_cierre','?')} | {t.get('ticker','?'):<6} "
                     f"[{t.get('direccion','long')}] {t.get('cantidad','?')} acc | "
                     f"Neto: {sym}{net:+.2f} | {t.get('broker','?').replace('broker_','B')}"
                 )
@@ -210,10 +211,13 @@ class PortfolioTracker:
             lines.append("  Sin historial aún.")
 
         # ---- Totales acumulados ----
-        total_usd = sum((t.get("net_pnl_usd") or 0) for t in trades)
-        total_eur = sum((t.get("net_pnl_eur") or 0) for t in trades)
+        total_usd = sum((t.get("net_pl_usd") or 0) for t in trades)
+        total_eur = sum((t.get("net_pl_eur") or 0) for t in trades)
         n_total = len(trades)
-        wins_total = sum(1 for t in trades if t.get("resultado") == "win")
+        wins_total = sum(
+            1 for t in trades
+            if (t.get("net_pl_usd") if t.get("net_pl_usd") is not None else t.get("net_pl_eur") or 0) > 0
+        )
 
         lines += [
             "",
