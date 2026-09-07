@@ -1,0 +1,28 @@
+{
+  "week_of": "2026-09-07",
+  "generated_at": "2026-09-07T06:11:15.905562+00:00",
+  "events": [
+    {
+      "date": "2026-09-10T08:30:00-04:00",
+      "titles": [
+        "Core PPI m/m",
+        "PPI m/m"
+      ],
+      "country": "USD",
+      "impact": "High",
+      "calendar_event_created": true
+    },
+    {
+      "date": "2026-09-11T08:30:00-04:00",
+      "titles": [
+        "Core CPI m/m",
+        "Core CPI y/y",
+        "CPI m/m",
+        "CPI y/y"
+      ],
+      "country": "USD",
+      "impact": "High",
+      "calendar_event_created": true
+    }
+  ]
+}
